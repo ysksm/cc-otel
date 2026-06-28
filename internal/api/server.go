@@ -1,0 +1,93 @@
+// Package api exposes the OTLP ingestion endpoint and the REST API the web UI
+// consumes, plus static serving of the embedded SPA.
+package api
+
+import (
+	"encoding/json"
+	"io"
+	"io/fs"
+	"net/http"
+	"strings"
+
+	"github.com/ysksm/cc-otel/internal/store"
+)
+
+// Server wires the store to HTTP handlers.
+type Server struct {
+	store       *store.Store
+	workspaceID string
+	webFS       fs.FS // embedded SPA (may be nil if not built)
+}
+
+// New constructs a Server bound to the default local workspace.
+func New(st *store.Store, workspaceID string, webFS fs.FS) *Server {
+	return &Server{store: st, workspaceID: workspaceID, webFS: webFS}
+}
+
+// Handler returns the root HTTP handler.
+func (s *Server) Handler() http.Handler {
+	mux := http.NewServeMux()
+
+	// OTLP ingestion
+	mux.HandleFunc("POST /v1/traces", s.handleIngestTraces)
+
+	// REST API
+	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/projects", s.handleListProjects)
+	mux.HandleFunc("POST /api/projects", s.handleCreateProject)
+	mux.HandleFunc("GET /api/projects/{slug}", s.handleGetProject)
+	mux.HandleFunc("GET /api/projects/{slug}/traces", s.handleListTraces)
+	mux.HandleFunc("GET /api/projects/{slug}/traces/{traceId}", s.handleGetTrace)
+	mux.HandleFunc("GET /api/projects/{slug}/sessions", s.handleListSessions)
+	mux.HandleFunc("GET /api/projects/{slug}/api-keys", s.handleListAPIKeys)
+	mux.HandleFunc("POST /api/projects/{slug}/api-keys", s.handleCreateAPIKey)
+
+	// Static SPA (and client-side routing fallback)
+	mux.HandleFunc("/", s.handleStatic)
+
+	return withCORS(mux)
+}
+
+// withCORS allows the Vite dev server (and any local origin) to call the API.
+func withCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Latitude-Project")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, code int, msg string) {
+	writeJSON(w, code, map[string]any{"error": msg})
+}
+
+func decodeJSON(r *http.Request, v any) error {
+	defer r.Body.Close()
+	return json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(v)
+}
+
+func bearerToken(r *http.Request) string {
+	h := r.Header.Get("Authorization")
+	if h == "" {
+		return ""
+	}
+	if strings.HasPrefix(strings.ToLower(h), "bearer ") {
+		return strings.TrimSpace(h[7:])
+	}
+	return strings.TrimSpace(h)
+}
