@@ -843,3 +843,186 @@ select:disabled {
   flex-direction: column;
   gap: 18px;
 }
+
+/* ---------- Scores ---------- */
+.scores-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.score-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.score-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-3);
+  padding: 10px 12px;
+}
+.score-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.score-value {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.score-pill {
+  display: inline-block;
+  padding: 1.5px 8px;
+  border-radius: 100px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--border-2);
+}
+.score-pill-pass {
+  color: var(--green);
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.1);
+}
+.score-pill-fail {
+  color: var(--red);
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.1);
+}
+.score-pill-error {
+  color: var(--amber);
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.1);
+}
+.score-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.score-time {
+  margin-left: auto;
+  font-size: 12px;
+}
+.score-reasoning {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.score-meta {
+  margin-top: 6px;
+  font-size: 11.5px;
+}
+
+/* ---------- Annotation / evaluation forms ---------- */
+.annotation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ann-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ann-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 160px;
+}
+.ann-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+}
+.ann-slider {
+  width: 100%;
+  accent-color: var(--accent-2);
+}
+.ann-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ann-toggle input {
+  width: auto;
+  accent-color: var(--accent-2);
+}
+.ann-textarea {
+  background: var(--bg-3);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  padding: 7px 9px;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+.ann-textarea:focus {
+  border-color: var(--accent-2);
+}
+.ann-actions {
+  display: flex;
+}
+
+.eval-run-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.eval-run-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-3);
+  padding: 8px 12px;
+}
+.eval-run-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.eval-run-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.create-eval-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.eval-form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.eval-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 160px;
+}
+.eval-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

@@ -39,6 +39,29 @@ Implemented:
   semantic-convention enrichment (provider/model/operation, additive token
   normalization, cost estimation, session/user/tool/messages) and a REST API
 - React SPA: projects, traces & sessions lists, trace detail with span waterfall
+- **Evaluations & scores**: manual annotations on traces, plus LLM-as-judge
+  evaluations (Scores tab + Evaluations settings)
+
+## Evaluations (LLM-as-judge)
+
+Define evaluators in **Settings → Evaluations** (a name + judge prompt + model),
+then run them from a trace's **Scores** tab. Results are stored as scores. You can
+also add manual annotations.
+
+The judge LLM is configured via env vars (a per-evaluation provider/model
+overrides these). Point it at a local Ollama to keep everything local:
+
+```sh
+# Local, fully offline (Ollama):
+export CCOTEL_LLM_PROVIDER=openai           # OpenAI-compatible API
+export CCOTEL_LLM_BASE_URL=http://localhost:11434/v1
+export CCOTEL_LLM_MODEL=llama3.1
+
+# or a hosted provider:
+export CCOTEL_LLM_PROVIDER=anthropic
+export CCOTEL_LLM_API_KEY=...
+export CCOTEL_LLM_MODEL=claude-sonnet-4-6
+```
 
 ## Quick start
 

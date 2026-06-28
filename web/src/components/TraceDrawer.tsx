@@ -1,15 +1,22 @@
-import { useEffect } from 'react'
-import { api, type Span, type TraceSummary } from '../lib/api'
-import { formatAbsolute, formatCost, formatDuration, formatInt } from '../lib/format'
+import { useEffect, useState } from 'react'
+import { api, type Evaluation, type Score, type Span, type TraceSummary } from '../lib/api'
+import {
+  formatAbsolute,
+  formatCost,
+  formatDuration,
+  formatInt,
+  formatRelativeIso,
+  formatScore,
+} from '../lib/format'
 import { parseJsonArray, parseMessages, parseJson, stringifyUnknown } from '../lib/parse'
 import { findConversationSpan, traceWindow } from '../lib/tree'
 import { useAsync } from '../hooks/useAsync'
-import { Badge, ErrorBox, ModelBadges, Spinner, Stat, MonoId } from './common'
+import { Badge, EmptyState, ErrorBox, ModelBadges, Spinner, Stat, MonoId } from './common'
 import { MessageThread } from './Messages'
 import { SpanDetail } from './SpanDetail'
 import { Waterfall } from './Waterfall'
 
-export type DrawerTab = 'spans' | 'conversation' | 'trace'
+export type DrawerTab = 'spans' | 'conversation' | 'trace' | 'scores'
 
 export function TraceDrawer({
   slug,
@@ -63,6 +70,9 @@ export function TraceDrawer({
           <TabBtn active={tab === 'trace'} onClick={() => onTabChange('trace')}>
             Trace
           </TabBtn>
+          <TabBtn active={tab === 'scores'} onClick={() => onTabChange('scores')}>
+            Scores
+          </TabBtn>
         </div>
 
         <div className="drawer-body">
@@ -78,6 +88,7 @@ export function TraceDrawer({
           )}
           {data && tab === 'conversation' && <ConversationTab spans={data.spans} />}
           {data && tab === 'trace' && <TraceTab trace={data.trace} spans={data.spans} />}
+          {tab === 'scores' && <ScoresTab slug={slug} traceId={traceId} />}
         </div>
       </div>
     </>
@@ -251,6 +262,252 @@ function TraceTab({ trace, spans }: { trace: TraceSummary; spans: Span[] }) {
         </div>
       </div>
     </div>
+  )
+}
+
+function ScoresTab({ slug, traceId }: { slug: string; traceId: string }) {
+  const { data, loading, error, reload } = useAsync(
+    () => api.listTraceScores(slug, traceId),
+    [slug, traceId],
+  )
+  const evals = useAsync(() => api.listEvaluations(slug), [slug])
+  const scores = data?.items ?? []
+
+  return (
+    <div className="scores-tab">
+      <section className="detail-section">
+        <h4>Scores</h4>
+        {loading && <Spinner label="Loading scores…" />}
+        {error && <ErrorBox error={error} />}
+        {!loading && !error && scores.length === 0 && (
+          <div className="dim pad">No scores yet for this trace.</div>
+        )}
+        {!loading && !error && scores.length > 0 && (
+          <div className="score-list">
+            {scores.map((s) => (
+              <ScoreCard key={s.id} score={s} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <AnnotationForm slug={slug} traceId={traceId} onCreated={reload} />
+
+      <RunEvaluation
+        evaluations={evals.data?.items ?? []}
+        loading={evals.loading}
+        error={evals.error}
+        slug={slug}
+        traceId={traceId}
+        onRan={reload}
+      />
+    </div>
+  )
+}
+
+function scorePill(score: Score): { text: string; tone: 'pass' | 'fail' | 'error' } {
+  if (score.errored) return { text: 'ERROR', tone: 'error' }
+  if (score.passed) return { text: 'PASS', tone: 'pass' }
+  return { text: 'FAIL', tone: 'fail' }
+}
+
+function ScoreCard({ score }: { score: Score }) {
+  const pill = scorePill(score)
+  return (
+    <div className="score-card">
+      <div className="score-card-head">
+        <span className="score-value" title={`value ${score.value}`}>
+          {formatScore(score.value)}
+        </span>
+        <span className={`score-pill score-pill-${pill.tone}`}>{pill.text}</span>
+        <span className="score-name">{score.name || '(unnamed)'}</span>
+        <Badge tone="muted">{score.source}</Badge>
+        <span className="score-time dim" title={score.createdAt}>
+          {formatRelativeIso(score.createdAt)}
+        </span>
+      </div>
+      {score.reasoning && <div className="score-reasoning">{score.reasoning}</div>}
+      {score.tokens > 0 && (
+        <div className="score-meta dim">
+          {formatInt(score.tokens)} tokens
+          {score.costMicrocents > 0 && <> · {formatCost(score.costMicrocents)}</>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AnnotationForm({
+  slug,
+  traceId,
+  onCreated,
+}: {
+  slug: string
+  traceId: string
+  onCreated: () => void
+}) {
+  const [name, setName] = useState('annotation')
+  const [value, setValue] = useState(1)
+  const [passed, setPassed] = useState(true)
+  const [reasoning, setReasoning] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<Error | undefined>()
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed || submitting) return
+    setSubmitting(true)
+    setSubmitError(undefined)
+    try {
+      await api.createAnnotation(slug, traceId, {
+        name: trimmed,
+        value,
+        passed,
+        reasoning: reasoning.trim() || undefined,
+      })
+      setName('annotation')
+      setValue(1)
+      setPassed(true)
+      setReasoning('')
+      onCreated()
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err : new Error(String(err)))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <section className="detail-section">
+      <h4>Add annotation</h4>
+      <form className="annotation-form" onSubmit={onSubmit}>
+        <div className="ann-row">
+          <label className="ann-field">
+            <span className="ann-label">Name</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="annotation"
+            />
+          </label>
+          <label className="ann-field">
+            <span className="ann-label">Value {value.toFixed(2)}</span>
+            <input
+              className="ann-slider"
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={value}
+              onChange={(e) => setValue(Number(e.target.value))}
+            />
+          </label>
+        </div>
+        <div className="ann-row">
+          <label className="ann-toggle">
+            <input
+              type="checkbox"
+              checked={passed}
+              onChange={(e) => setPassed(e.target.checked)}
+            />
+            <span>{passed ? 'Pass' : 'Fail'}</span>
+          </label>
+        </div>
+        <label className="ann-field">
+          <span className="ann-label">Note (optional)</span>
+          <textarea
+            className="ann-textarea"
+            value={reasoning}
+            onChange={(e) => setReasoning(e.target.value)}
+            placeholder="Why this score?"
+            rows={3}
+          />
+        </label>
+        {submitError && <ErrorBox error={submitError} />}
+        <div className="ann-actions">
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={submitting || !name.trim()}
+          >
+            {submitting ? 'Submitting…' : 'Submit annotation'}
+          </button>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+function RunEvaluation({
+  evaluations,
+  loading,
+  error,
+  slug,
+  traceId,
+  onRan,
+}: {
+  evaluations: Evaluation[]
+  loading: boolean
+  error: Error | undefined
+  slug: string
+  traceId: string
+  onRan: () => void
+}) {
+  const [runningId, setRunningId] = useState<string | undefined>()
+  const [runError, setRunError] = useState<Error | undefined>()
+  const enabled = evaluations.filter((e) => e.enabled)
+
+  const run = async (ev: Evaluation) => {
+    if (runningId) return
+    setRunningId(ev.id)
+    setRunError(undefined)
+    try {
+      await api.runEvaluation(slug, ev.id, traceId)
+      onRan()
+    } catch (err) {
+      setRunError(err instanceof Error ? err : new Error(String(err)))
+    } finally {
+      setRunningId(undefined)
+    }
+  }
+
+  return (
+    <section className="detail-section">
+      <h4>Run evaluation</h4>
+      {loading && <Spinner label="Loading evaluations…" />}
+      {error && <ErrorBox error={error} />}
+      {runError && <ErrorBox error={runError} />}
+      {!loading && !error && enabled.length === 0 && (
+        <EmptyState title="No evaluations configured">
+          <p>
+            Create an LLM-as-judge evaluation in <strong>Settings</strong> to score this trace
+            automatically.
+          </p>
+        </EmptyState>
+      )}
+      {!loading && !error && enabled.length > 0 && (
+        <div className="eval-run-list">
+          {enabled.map((ev) => (
+            <div className="eval-run-row" key={ev.id}>
+              <div className="eval-run-info">
+                <span className="eval-run-name">{ev.name}</span>
+                {ev.model && <Badge tone="model">{ev.model}</Badge>}
+                {ev.provider && <Badge tone="provider">{ev.provider}</Badge>}
+              </div>
+              <button
+                className="btn"
+                onClick={() => run(ev)}
+                disabled={runningId != null}
+              >
+                {runningId === ev.id ? 'Running…' : 'Run'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 

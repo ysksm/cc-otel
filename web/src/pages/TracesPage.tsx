@@ -12,6 +12,14 @@ import {
 } from '../components/common'
 import { TraceDrawer, type DrawerTab } from '../components/TraceDrawer'
 
+const DRAWER_TABS: readonly DrawerTab[] = ['spans', 'conversation', 'trace', 'scores']
+
+function parseTab(value: string | null): DrawerTab {
+  return value && (DRAWER_TABS as readonly string[]).includes(value)
+    ? (value as DrawerTab)
+    : 'spans'
+}
+
 export function TracesPage() {
   const { slug = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -23,7 +31,7 @@ export function TracesPage() {
   const [done, setDone] = useState(false)
 
   const traceId = searchParams.get('traceId') ?? undefined
-  const tab = (searchParams.get('tab') as DrawerTab | null) ?? 'spans'
+  const tab = parseTab(searchParams.get('tab'))
   const spanId = searchParams.get('spanId') ?? undefined
 
   // Initial / project-change load.

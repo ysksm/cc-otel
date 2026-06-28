@@ -87,6 +87,19 @@ export function formatInt(n: number): string {
   return n.toLocaleString()
 }
 
+/** Format an ISO-8601 timestamp string as a relative time like "3m ago". */
+export function formatRelativeIso(iso: string, now: number = Date.now()): string {
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return iso
+  return formatRelative(ms * 1e6, now)
+}
+
+/** Format a 0..1 score value as a "0.00 (NN%)" string. */
+export function formatScore(value: number): string {
+  if (value == null || Number.isNaN(value)) return '—'
+  return `${value.toFixed(2)} (${Math.round(value * 100)}%)`
+}
+
 /** Truncate a long id, keeping the head; full value is meant to go in a title attr. */
 export function truncateId(id: string, head = 8): string {
   if (!id) return ''

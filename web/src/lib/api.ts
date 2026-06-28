@@ -109,6 +109,37 @@ export interface APIKey {
   token?: string // plaintext, present ONCE on creation
 }
 
+export interface Score {
+  id: string
+  traceId: string
+  spanId: string
+  sessionId: string
+  source: 'annotation' | 'evaluation'
+  sourceId: string
+  name: string
+  value: number // 0..1
+  passed: boolean
+  errored: boolean
+  reasoning: string
+  durationNs: number
+  tokens: number
+  costMicrocents: number
+  createdAt: string
+}
+
+export interface Evaluation {
+  id: string
+  workspaceId: string
+  projectId: string
+  name: string
+  slug: string
+  prompt: string
+  provider: string
+  model: string
+  enabled: boolean
+  createdAt: string
+}
+
 export interface TracesResponse {
   items: TraceSummary[]
   nextCursor: string
@@ -183,5 +214,45 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     })
+  },
+  listTraceScores(slug: string, traceId: string): Promise<{ items: Score[] }> {
+    return request(
+      `/api/projects/${encodeURIComponent(slug)}/traces/${encodeURIComponent(traceId)}/scores`,
+    )
+  },
+  createAnnotation(
+    slug: string,
+    traceId: string,
+    body: { name: string; spanId?: string; value: number; passed?: boolean; reasoning?: string },
+  ): Promise<Score> {
+    return request(
+      `/api/projects/${encodeURIComponent(slug)}/traces/${encodeURIComponent(traceId)}/scores`,
+      { method: 'POST', body: JSON.stringify(body) },
+    )
+  },
+  listEvaluations(slug: string): Promise<{ items: Evaluation[] }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/evaluations`)
+  },
+  createEvaluation(
+    slug: string,
+    body: {
+      name: string
+      slug?: string
+      prompt: string
+      provider?: string
+      model?: string
+      enabled?: boolean
+    },
+  ): Promise<Evaluation> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/evaluations`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+  runEvaluation(slug: string, evalId: string, traceId: string): Promise<Score> {
+    return request(
+      `/api/projects/${encodeURIComponent(slug)}/evaluations/${encodeURIComponent(evalId)}/run`,
+      { method: 'POST', body: JSON.stringify({ traceId }) },
+    )
   },
 }
