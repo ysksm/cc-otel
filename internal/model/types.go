@@ -97,6 +97,41 @@ type Span struct {
 	Resource   string `json:"resource"`   // JSON object
 }
 
+// Evaluation is an LLM-as-judge evaluator definition.
+type Evaluation struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspaceId"`
+	ProjectID   string    `json:"projectId"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Prompt      string    `json:"prompt"`
+	Provider    string    `json:"provider"`
+	Model       string    `json:"model"`
+	Enabled     bool      `json:"enabled"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+// Score is an annotation or evaluation result attached to a trace/span.
+type Score struct {
+	ID              string    `json:"id"`
+	WorkspaceID     string    `json:"-"`
+	ProjectID       string    `json:"-"`
+	TraceID         string    `json:"traceId"`
+	SpanID          string    `json:"spanId"`
+	SessionID       string    `json:"sessionId"`
+	Source          string    `json:"source"`   // annotation | evaluation
+	SourceID        string    `json:"sourceId"` // evaluation id, or "UI"
+	Name            string    `json:"name"`
+	Value           float64   `json:"value"`
+	Passed          bool      `json:"passed"`
+	Errored         bool      `json:"errored"`
+	Reasoning       string    `json:"reasoning"`
+	DurationNs      int64     `json:"durationNs"`
+	Tokens          int64     `json:"tokens"`
+	CostMicrocents  int64     `json:"costMicrocents"`
+	CreatedAt       time.Time `json:"createdAt"`
+}
+
 // TraceSummary is an aggregated row from the traces view.
 type TraceSummary struct {
 	TraceID             string `json:"traceId"`

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ysksm/cc-otel/internal/llm"
 	"github.com/ysksm/cc-otel/internal/store"
 )
 
@@ -16,12 +17,13 @@ import (
 type Server struct {
 	store       *store.Store
 	workspaceID string
-	webFS       fs.FS // embedded SPA (may be nil if not built)
+	webFS       fs.FS      // embedded SPA (may be nil if not built)
+	llmCfg      llm.Config // default LLM config for evaluations (from env)
 }
 
 // New constructs a Server bound to the default local workspace.
 func New(st *store.Store, workspaceID string, webFS fs.FS) *Server {
-	return &Server{store: st, workspaceID: workspaceID, webFS: webFS}
+	return &Server{store: st, workspaceID: workspaceID, webFS: webFS, llmCfg: llm.ConfigFromEnv()}
 }
 
 // Handler returns the root HTTP handler.
@@ -41,6 +43,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects/{slug}/sessions", s.handleListSessions)
 	mux.HandleFunc("GET /api/projects/{slug}/api-keys", s.handleListAPIKeys)
 	mux.HandleFunc("POST /api/projects/{slug}/api-keys", s.handleCreateAPIKey)
+
+	// Scores (annotations) + evaluations (LLM-as-judge)
+	mux.HandleFunc("GET /api/projects/{slug}/traces/{traceId}/scores", s.handleListTraceScores)
+	mux.HandleFunc("POST /api/projects/{slug}/traces/{traceId}/scores", s.handleCreateTraceScore)
+	mux.HandleFunc("GET /api/projects/{slug}/evaluations", s.handleListEvaluations)
+	mux.HandleFunc("POST /api/projects/{slug}/evaluations", s.handleCreateEvaluation)
+	mux.HandleFunc("POST /api/projects/{slug}/evaluations/{evalId}/run", s.handleRunEvaluation)
 
 	// Static SPA (and client-side routing fallback)
 	mux.HandleFunc("/", s.handleStatic)
