@@ -132,6 +132,29 @@ type Score struct {
 	CreatedAt       time.Time `json:"createdAt"`
 }
 
+// UserSummary aggregates a project's spans by end-user (user.id).
+type UserSummary struct {
+	UserID              string `json:"userId"`
+	UserEmail           string `json:"userEmail"`
+	TraceCount          int64  `json:"traceCount"`
+	SpanCount           int64  `json:"spanCount"`
+	ErrorCount          int64  `json:"errorCount"`
+	TokensInput         int64  `json:"tokensInput"`
+	TokensOutput        int64  `json:"tokensOutput"`
+	CostTotalMicrocents int64  `json:"costTotalMicrocents"`
+	LastSeenNs          int64  `json:"lastSeenNs"`
+	Models              string `json:"models"` // JSON array
+}
+
+// ToolSummary aggregates tool-execution spans by tool name.
+type ToolSummary struct {
+	ToolName      string `json:"toolName"`
+	CallCount     int64  `json:"callCount"`
+	ErrorCount    int64  `json:"errorCount"`
+	AvgDurationNs int64  `json:"avgDurationNs"`
+	LastSeenNs    int64  `json:"lastSeenNs"`
+}
+
 // TraceSummary is an aggregated row from the traces view.
 type TraceSummary struct {
 	TraceID             string `json:"traceId"`
