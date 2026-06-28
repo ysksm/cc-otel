@@ -77,6 +77,26 @@ func ParseVerdict(text string) (Verdict, error) {
 	return v, nil
 }
 
+// SpanText extracts a plain-text representation of a single span's content
+// (name + input/output message text), used for embedding/indexing.
+func SpanText(s model.Span) string {
+	var parts []string
+	if s.Name != "" {
+		parts = append(parts, s.Name)
+	}
+	for _, m := range parseMsgs(s.InputMessages) {
+		if m.Content != "" {
+			parts = append(parts, m.Content)
+		}
+	}
+	for _, m := range parseMsgs(s.OutputMessages) {
+		if m.Content != "" {
+			parts = append(parts, m.Content)
+		}
+	}
+	return strings.TrimSpace(strings.Join(parts, "\n"))
+}
+
 // BuildConversation formats the trace's most relevant LLM conversation as text.
 func BuildConversation(spans []model.Span) string {
 	span := pickConversationSpan(spans)

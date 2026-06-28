@@ -47,6 +47,53 @@ func ConfigFromEnv() Config {
 	}
 }
 
+// EmbedConfigFromEnv reads embedding settings (CCOTEL_EMBED_*). Embeddings are
+// considered configured only when a model is set.
+func EmbedConfigFromEnv() Config {
+	return Config{
+		Provider: getenv("CCOTEL_EMBED_PROVIDER", "openai"),
+		BaseURL:  os.Getenv("CCOTEL_EMBED_BASE_URL"),
+		APIKey:   os.Getenv("CCOTEL_EMBED_API_KEY"),
+		Model:    os.Getenv("CCOTEL_EMBED_MODEL"),
+	}
+}
+
+// Embed returns embedding vectors for the given inputs via an OpenAI-compatible
+// /embeddings endpoint (works with OpenAI, Ollama, LM Studio, ...).
+func (c *Client) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
+	if c.cfg.Model == "" {
+		return nil, fmt.Errorf("no embedding model configured (set CCOTEL_EMBED_MODEL)")
+	}
+	if len(inputs) == 0 {
+		return nil, nil
+	}
+	base := c.cfg.BaseURL
+	if base == "" {
+		base = "https://api.openai.com/v1"
+	}
+	reqBody := map[string]any{"model": c.cfg.Model, "input": inputs}
+	var out struct {
+		Data []struct {
+			Embedding []float32 `json:"embedding"`
+		} `json:"data"`
+	}
+	headers := http.Header{}
+	if c.cfg.APIKey != "" {
+		headers.Set("Authorization", "Bearer "+c.cfg.APIKey)
+	}
+	if err := c.postJSON(ctx, strings.TrimRight(base, "/")+"/embeddings", headers, reqBody, &out); err != nil {
+		return nil, err
+	}
+	vecs := make([][]float32, 0, len(out.Data))
+	for _, d := range out.Data {
+		vecs = append(vecs, d.Embedding)
+	}
+	if len(vecs) != len(inputs) {
+		return nil, fmt.Errorf("embedding count mismatch: got %d for %d inputs", len(vecs), len(inputs))
+	}
+	return vecs, nil
+}
+
 // Merge overlays non-empty fields of o onto c (used for per-evaluation overrides).
 func (c Config) Merge(o Config) Config {
 	if o.Provider != "" {

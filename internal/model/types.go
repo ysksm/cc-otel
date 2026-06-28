@@ -242,6 +242,15 @@ type Signal struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+// SearchHit is a semantic-search result span.
+type SearchHit struct {
+	TraceID string  `json:"traceId"`
+	SpanID  string  `json:"spanId"`
+	Name    string  `json:"name"`
+	Snippet string  `json:"snippet"`
+	Score   float64 `json:"score"`
+}
+
 // AnalyticsPoint is one time-bucket of project metrics.
 type AnalyticsPoint struct {
 	BucketStartNs       int64 `json:"bucketStartNs"`

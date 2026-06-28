@@ -20,6 +20,7 @@ type Server struct {
 	workspaceID string
 	webFS       fs.FS       // embedded SPA (may be nil if not built)
 	llmCfg      llm.Config  // default LLM config for evaluations (from env)
+	embedCfg    llm.Config  // embedding config for semantic search (from env)
 	auth        auth.Config // opt-in dashboard auth (from env)
 }
 
@@ -30,6 +31,7 @@ func New(st *store.Store, workspaceID string, webFS fs.FS) *Server {
 		workspaceID: workspaceID,
 		webFS:       webFS,
 		llmCfg:      llm.ConfigFromEnv(),
+		embedCfg:    llm.EmbedConfigFromEnv(),
 		auth:        auth.ConfigFromEnv(),
 	}
 }
@@ -55,6 +57,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects/{slug}/traces/{traceId}/export", s.handleExportTrace)
 	mux.HandleFunc("GET /api/projects/{slug}/sessions", s.handleListSessions)
 	mux.HandleFunc("GET /api/projects/{slug}/analytics", s.handleAnalytics)
+	mux.HandleFunc("GET /api/projects/{slug}/search/status", s.handleSearchStatus)
+	mux.HandleFunc("POST /api/projects/{slug}/search/index", s.handleSearchIndex)
+	mux.HandleFunc("POST /api/projects/{slug}/search/semantic", s.handleSearchSemantic)
 	mux.HandleFunc("GET /api/projects/{slug}/users", s.handleListUsers)
 	mux.HandleFunc("GET /api/projects/{slug}/tools", s.handleListTools)
 	mux.HandleFunc("GET /api/projects/{slug}/tools/{toolName}", s.handleGetTool)
