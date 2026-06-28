@@ -35,6 +35,11 @@ export function Sidebar() {
       </div>
 
       <nav className="nav">
+        <NavItem
+          to={`/projects/${currentSlug}/dashboard`}
+          label="Dashboard"
+          disabled={!currentSlug}
+        />
         <NavItem to={`/projects/${currentSlug}/traces`} label="Traces" disabled={!currentSlug} />
         <NavItem
           to={`/projects/${currentSlug}/sessions`}

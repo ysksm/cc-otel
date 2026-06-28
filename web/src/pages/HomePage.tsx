@@ -3,7 +3,7 @@ import { useProjects } from '../hooks/useProjects'
 import { EmptyState, ErrorBox, Spinner } from '../components/common'
 
 /**
- * Root route. Redirects to the first project's traces, or shows an onboarding
+ * Root route. Redirects to the first project's dashboard, or shows an onboarding
  * empty state when there are no projects.
  */
 export function HomePage() {
@@ -26,7 +26,7 @@ export function HomePage() {
   }
 
   if (projects.length > 0) {
-    return <Navigate to={`/projects/${projects[0].slug}/traces`} replace />
+    return <Navigate to={`/projects/${projects[0].slug}/dashboard`} replace />
   }
 
   return (

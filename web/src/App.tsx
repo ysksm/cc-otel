@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProjectsProvider } from './hooks/useProjects'
 import { Layout } from './components/Layout'
 import { HomePage } from './pages/HomePage'
+import { DashboardPage } from './pages/DashboardPage'
 import { TracesPage } from './pages/TracesPage'
 import { SessionsPage } from './pages/SessionsPage'
 import { UsersPage } from './pages/UsersPage'
@@ -15,6 +16,7 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/projects/:slug/dashboard" element={<DashboardPage />} />
           <Route path="/projects/:slug/traces" element={<TracesPage />} />
           <Route path="/projects/:slug/sessions" element={<SessionsPage />} />
           <Route path="/projects/:slug/users" element={<UsersPage />} />

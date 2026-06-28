@@ -124,6 +124,43 @@ export interface ToolSummary {
   lastSeenNs: number
 }
 
+export type AnalyticsRange = '1h' | '24h' | '7d' | '30d'
+
+export interface AnalyticsTotals {
+  traceCount: number
+  spanCount: number
+  errorCount: number
+  costTotalMicrocents: number
+  tokensInput: number
+  tokensOutput: number
+}
+
+export interface AnalyticsBucket {
+  bucketStartNs: number
+  traceCount: number
+  spanCount: number
+  errorCount: number
+  costTotalMicrocents: number
+  tokensInput: number
+  tokensOutput: number
+  avgDurationNs: number
+}
+
+export interface AnalyticsModel {
+  model: string
+  costTotalMicrocents: number
+  traceCount: number
+}
+
+export interface Analytics {
+  range: string
+  bucketNs: number
+  sinceNs: number
+  totals: AnalyticsTotals
+  series: AnalyticsBucket[]
+  topModels: AnalyticsModel[]
+}
+
 export interface APIKey {
   id: string
   workspaceId: string
@@ -252,6 +289,11 @@ export const api = {
   },
   listTools(slug: string): Promise<{ items: ToolSummary[] }> {
     return request(`/api/projects/${encodeURIComponent(slug)}/tools`)
+  },
+  getAnalytics(slug: string, range: AnalyticsRange = '24h'): Promise<Analytics> {
+    const params = new URLSearchParams()
+    params.set('range', range)
+    return request(`/api/projects/${encodeURIComponent(slug)}/analytics?${params.toString()}`)
   },
   getTool(slug: string, toolName: string): Promise<{ tool: ToolSummary; calls: Span[] }> {
     return request(
