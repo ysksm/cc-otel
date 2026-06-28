@@ -99,6 +99,27 @@ export interface SessionSummary {
   userId: string
 }
 
+export interface UserSummary {
+  userId: string
+  userEmail: string
+  traceCount: number
+  spanCount: number
+  errorCount: number
+  tokensInput: number
+  tokensOutput: number
+  costTotalMicrocents: number
+  lastSeenNs: number
+  models: string // JSON array string e.g. "[\"gpt-4o\"]"
+}
+
+export interface ToolSummary {
+  toolName: string
+  callCount: number
+  errorCount: number
+  avgDurationNs: number
+  lastSeenNs: number
+}
+
 export interface APIKey {
   id: string
   workspaceId: string
@@ -205,6 +226,17 @@ export const api = {
     const params = new URLSearchParams()
     params.set('limit', String(opts?.limit ?? 50))
     return request(`/api/projects/${encodeURIComponent(slug)}/sessions?${params.toString()}`)
+  },
+  listUsers(slug: string): Promise<{ items: UserSummary[] }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/users`)
+  },
+  listTools(slug: string): Promise<{ items: ToolSummary[] }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/tools`)
+  },
+  getTool(slug: string, toolName: string): Promise<{ tool: ToolSummary; calls: Span[] }> {
+    return request(
+      `/api/projects/${encodeURIComponent(slug)}/tools/${encodeURIComponent(toolName)}`,
+    )
   },
   listApiKeys(slug: string): Promise<{ items: APIKey[] }> {
     return request(`/api/projects/${encodeURIComponent(slug)}/api-keys`)

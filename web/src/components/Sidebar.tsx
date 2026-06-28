@@ -41,6 +41,8 @@ export function Sidebar() {
           label="Sessions"
           disabled={!currentSlug}
         />
+        <NavItem to={`/projects/${currentSlug}/users`} label="Users" disabled={!currentSlug} />
+        <NavItem to={`/projects/${currentSlug}/tools`} label="Tools" disabled={!currentSlug} />
         <NavItem
           to={`/projects/${currentSlug}/settings`}
           label="Settings"

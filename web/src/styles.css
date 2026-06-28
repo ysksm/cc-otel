@@ -245,6 +245,41 @@ select:disabled {
   font-weight: 600;
 }
 
+/* User cell: id on top, email under it */
+.user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.user-email {
+  font-size: 11.5px;
+  color: var(--dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Link that fills a table cell without inheriting underline styling */
+.row-link {
+  color: var(--text);
+}
+.row-link:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* Tool detail summary + section heading */
+.tool-summary {
+  margin-bottom: 24px;
+  max-width: 760px;
+}
+.subhead {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
 /* ---------- Badges ---------- */
 .badge-row {
   display: inline-flex;
