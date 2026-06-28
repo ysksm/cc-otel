@@ -33,6 +33,9 @@ test: ## Run the Go test suite
 sample: ## Send sample OTLP traces to a running server
 	./scripts/send-sample-traces.sh
 
+release: ## Build SPA + cross-compiled binaries and archives via scripts/build.sh
+	./scripts/build.sh --release
+
 cross: web ## Cross-compile CGO-free binaries (windows/macos/linux) into dist/
 	mkdir -p dist
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GO) build -o dist/$(APP)-windows-amd64.exe ./cmd/ccotel
