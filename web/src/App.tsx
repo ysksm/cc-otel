@@ -8,6 +8,8 @@ import { SessionsPage } from './pages/SessionsPage'
 import { UsersPage } from './pages/UsersPage'
 import { ToolsPage } from './pages/ToolsPage'
 import { ToolDetailPage } from './pages/ToolDetailPage'
+import { SignalsPage } from './pages/SignalsPage'
+import { MonitorsPage } from './pages/MonitorsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 export function App() {
@@ -22,6 +24,8 @@ export function App() {
           <Route path="/projects/:slug/users" element={<UsersPage />} />
           <Route path="/projects/:slug/tools" element={<ToolsPage />} />
           <Route path="/projects/:slug/tools/:toolName" element={<ToolDetailPage />} />
+          <Route path="/projects/:slug/signals" element={<SignalsPage />} />
+          <Route path="/projects/:slug/monitors" element={<MonitorsPage />} />
           <Route path="/projects/:slug/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

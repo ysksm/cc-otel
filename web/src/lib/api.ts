@@ -202,6 +202,36 @@ export interface Evaluation {
   createdAt: string
 }
 
+export type MonitorConditionType =
+  | 'trace_error'
+  | 'cost_gt'
+  | 'latency_gt'
+  | 'tokens_gt'
+  | 'model_used'
+
+export interface Monitor {
+  id: string
+  workspaceId: string
+  projectId: string
+  name: string
+  conditionType: MonitorConditionType
+  threshold: number
+  valueStr: string
+  enabled: boolean
+  createdAt: string
+}
+
+export interface Signal {
+  id: string
+  monitorId: string
+  monitorName: string
+  traceId: string
+  sessionId: string
+  description: string
+  value: number
+  createdAt: string
+}
+
 export interface TracesResponse {
   items: TraceSummary[]
   nextCursor: string
@@ -348,5 +378,32 @@ export const api = {
       `/api/projects/${encodeURIComponent(slug)}/evaluations/${encodeURIComponent(evalId)}/run`,
       { method: 'POST', body: JSON.stringify({ traceId }) },
     )
+  },
+  listMonitors(slug: string): Promise<{ items: Monitor[] }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/monitors`)
+  },
+  createMonitor(
+    slug: string,
+    body: {
+      name: string
+      conditionType: MonitorConditionType
+      threshold?: number
+      valueStr?: string
+      enabled?: boolean
+    },
+  ): Promise<Monitor> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/monitors`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+  evaluateMonitors(slug: string): Promise<{ created: number }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/monitors/evaluate`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
+  listSignals(slug: string): Promise<{ items: Signal[] }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/signals`)
   },
 }

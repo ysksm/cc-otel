@@ -49,6 +49,16 @@ export function Sidebar() {
         <NavItem to={`/projects/${currentSlug}/users`} label="Users" disabled={!currentSlug} />
         <NavItem to={`/projects/${currentSlug}/tools`} label="Tools" disabled={!currentSlug} />
         <NavItem
+          to={`/projects/${currentSlug}/signals`}
+          label="Signals"
+          disabled={!currentSlug}
+        />
+        <NavItem
+          to={`/projects/${currentSlug}/monitors`}
+          label="Monitors"
+          disabled={!currentSlug}
+        />
+        <NavItem
           to={`/projects/${currentSlug}/settings`}
           label="Settings"
           disabled={!currentSlug}

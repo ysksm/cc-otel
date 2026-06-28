@@ -112,7 +112,8 @@ code {
 }
 
 select,
-input[type="text"] {
+input[type="text"],
+input[type="number"] {
   background: var(--bg-3);
   color: var(--text);
   border: 1px solid var(--border-2);
@@ -123,7 +124,8 @@ input[type="text"] {
   outline: none;
 }
 select:focus,
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="number"]:focus {
   border-color: var(--accent-2);
 }
 select:disabled {
@@ -734,6 +736,27 @@ select:disabled {
 }
 .snippet p {
   margin-top: 8px;
+}
+
+/* ---------- Monitors ---------- */
+.monitors-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.monitors-list-head h2 {
+  margin: 0;
+}
+.monitors-run {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.monitors-run-note {
+  font-size: 12.5px;
+  color: var(--green);
 }
 
 /* ---------- Drawer ---------- */
