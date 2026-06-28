@@ -1,0 +1,187 @@
+// Typed REST client for the cc-otel Go backend.
+//
+// NOTE: several Span/Trace fields are JSON encoded as STRINGS by the backend and
+// must be JSON.parse()'d on the client. See parse helpers below.
+
+export interface Project {
+  id: string
+  workspaceId: string
+  name: string
+  slug: string
+  firstTraceAt?: string
+  createdAt: string
+}
+
+export interface TraceSummary {
+  traceId: string
+  sessionId: string
+  spanCount: number
+  errorCount: number
+  startTimeNs: number
+  endTimeNs: number
+  durationNs: number
+  tokensInput: number
+  tokensOutput: number
+  tokensCacheRead: number
+  tokensCacheCreate: number
+  tokensReasoning: number
+  costTotalMicrocents: number
+  models: string // JSON array string e.g. "[\"gpt-4o\"]"
+  providers: string // JSON array string
+  rootSpanName: string
+  rootSpanId: string
+}
+
+export interface Span {
+  sessionId: string
+  traceId: string
+  spanId: string
+  parentSpanId: string
+  startTimeNs: number
+  endTimeNs: number
+  name: string
+  serviceName: string
+  kind: number
+  statusCode: number // 0 unset, 1 ok, 2 error
+  statusMessage: string
+  errorType: string
+  scopeName: string
+  scopeVersion: string
+  operation: string
+  provider: string
+  model: string
+  responseModel: string
+  tokensInput: number
+  tokensOutput: number
+  tokensCacheRead: number
+  tokensCacheCreate: number
+  tokensReasoning: number
+  costInputMicrocents: number
+  costOutputMicrocents: number
+  costTotalMicrocents: number
+  costIsEstimated: boolean
+  timeToFirstTokenNs: number
+  isStreaming: boolean
+  responseId: string
+  userId: string
+  userEmail: string
+  toolCallId: string
+  toolName: string
+  toolInput: string
+  toolOutput: string
+  // The trailing string fields are JSON encoded as strings; JSON.parse them.
+  finishReasons: string
+  toolNames: string
+  inputMessages: string
+  outputMessages: string
+  systemInstructions: string
+  toolDefinitions: string
+  events: string
+  links: string
+  tags: string
+  attributes: string
+  resource: string
+}
+
+export interface SessionSummary {
+  sessionId: string
+  traceCount: number
+  spanCount: number
+  errorCount: number
+  startTimeNs: number
+  endTimeNs: number
+  durationNs: number
+  tokensInput: number
+  tokensOutput: number
+  costTotalMicrocents: number
+  models: string
+  providers: string
+  userId: string
+}
+
+export interface APIKey {
+  id: string
+  workspaceId: string
+  name: string
+  tokenPreview: string
+  createdAt: string
+  lastUsedAt?: string
+  token?: string // plaintext, present ONCE on creation
+}
+
+export interface TracesResponse {
+  items: TraceSummary[]
+  nextCursor: string
+}
+
+export interface TraceDetailResponse {
+  trace: TraceSummary
+  spans: Span[]
+}
+
+export class ApiError extends Error {
+  status: number
+  body: string
+  constructor(status: number, body: string) {
+    super(`API error ${status}: ${body}`)
+    this.status = status
+    this.body = body
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
+  if (!res.ok) {
+    let body = ''
+    try {
+      body = await res.text()
+    } catch {
+      /* ignore */
+    }
+    throw new ApiError(res.status, body)
+  }
+  if (res.status === 204) {
+    return undefined as T
+  }
+  return (await res.json()) as T
+}
+
+export const api = {
+  listProjects(): Promise<{ items: Project[] }> {
+    return request('/api/projects')
+  },
+  createProject(body: { name: string; slug: string }): Promise<Project> {
+    return request('/api/projects', { method: 'POST', body: JSON.stringify(body) })
+  },
+  getProject(slug: string): Promise<Project> {
+    return request(`/api/projects/${encodeURIComponent(slug)}`)
+  },
+  listTraces(slug: string, opts?: { limit?: number; before?: number }): Promise<TracesResponse> {
+    const params = new URLSearchParams()
+    params.set('limit', String(opts?.limit ?? 50))
+    if (opts?.before != null) params.set('before', String(opts.before))
+    return request(`/api/projects/${encodeURIComponent(slug)}/traces?${params.toString()}`)
+  },
+  getTrace(slug: string, traceId: string): Promise<TraceDetailResponse> {
+    return request(
+      `/api/projects/${encodeURIComponent(slug)}/traces/${encodeURIComponent(traceId)}`,
+    )
+  },
+  listSessions(slug: string, opts?: { limit?: number }): Promise<{ items: SessionSummary[] }> {
+    const params = new URLSearchParams()
+    params.set('limit', String(opts?.limit ?? 50))
+    return request(`/api/projects/${encodeURIComponent(slug)}/sessions?${params.toString()}`)
+  },
+  listApiKeys(slug: string): Promise<{ items: APIKey[] }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/api-keys`)
+  },
+  createApiKey(slug: string, body: { name: string }): Promise<APIKey> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/api-keys`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+}

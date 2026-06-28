@@ -1,0 +1,209 @@
+import { useCallback, useEffect, useState } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
+import { api, type TraceSummary } from '../lib/api'
+import { formatCost, formatDuration, formatInt, formatTokens } from '../lib/format'
+import { parseJsonArray } from '../lib/parse'
+import {
+  EmptyState,
+  ErrorBox,
+  ModelBadges,
+  RelativeTime,
+  Spinner,
+} from '../components/common'
+import { TraceDrawer, type DrawerTab } from '../components/TraceDrawer'
+
+export function TracesPage() {
+  const { slug = '' } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const [traces, setTraces] = useState<TraceSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState<Error | undefined>()
+  const [done, setDone] = useState(false)
+
+  const traceId = searchParams.get('traceId') ?? undefined
+  const tab = (searchParams.get('tab') as DrawerTab | null) ?? 'spans'
+  const spanId = searchParams.get('spanId') ?? undefined
+
+  // Initial / project-change load.
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(undefined)
+    setTraces([])
+    setDone(false)
+    api
+      .listTraces(slug, { limit: 50 })
+      .then((res) => {
+        if (cancelled) return
+        setTraces(res.items)
+        setDone(res.items.length === 0 || !res.nextCursor)
+        setLoading(false)
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        setError(err instanceof Error ? err : new Error(String(err)))
+        setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || done || traces.length === 0) return
+    const last = traces[traces.length - 1]
+    setLoadingMore(true)
+    api
+      .listTraces(slug, { limit: 50, before: last.startTimeNs })
+      .then((res) => {
+        setTraces((prev) => [...prev, ...res.items])
+        if (res.items.length === 0 || !res.nextCursor) setDone(true)
+        setLoadingMore(false)
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err : new Error(String(err)))
+        setLoadingMore(false)
+      })
+  }, [slug, traces, loadingMore, done])
+
+  const openTrace = (id: string) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('traceId', id)
+    if (!next.get('tab')) next.set('tab', 'spans')
+    next.delete('spanId')
+    setSearchParams(next)
+  }
+
+  const closeDrawer = () => {
+    const next = new URLSearchParams(searchParams)
+    next.delete('traceId')
+    next.delete('tab')
+    next.delete('spanId')
+    setSearchParams(next)
+  }
+
+  const setTab = (t: DrawerTab) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', t)
+    setSearchParams(next)
+  }
+
+  const setSpan = (id: string | undefined) => {
+    const next = new URLSearchParams(searchParams)
+    if (id) next.set('spanId', id)
+    else next.delete('spanId')
+    setSearchParams(next)
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <h1>Traces</h1>
+        <span className="dim">{slug}</span>
+      </div>
+
+      {loading && <Spinner label="Loading traces…" />}
+      {error && <ErrorBox error={error} />}
+
+      {!loading && !error && traces.length === 0 && (
+        <EmptyState title="No traces yet">
+          <p>
+            Send OpenTelemetry traces to <code>POST /v1/traces</code> with an API key, and they will
+            appear here.
+          </p>
+          <p>
+            Create a key in <strong>Settings</strong> to get started.
+          </p>
+        </EmptyState>
+      )}
+
+      {!loading && !error && traces.length > 0 && (
+        <>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Root span</th>
+                  <th>Model</th>
+                  <th className="num">Spans</th>
+                  <th className="num">Errors</th>
+                  <th className="num">Tokens</th>
+                  <th className="num">Cost</th>
+                  <th className="num">Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {traces.map((t) => {
+                  const providers = parseJsonArray(t.providers)
+                  const models = parseJsonArray(t.models)
+                  const active = t.traceId === traceId
+                  return (
+                    <tr
+                      key={t.traceId}
+                      className={`clickable${active ? ' active' : ''}`}
+                      onClick={() => openTrace(t.traceId)}
+                    >
+                      <td>
+                        <RelativeTime ns={t.startTimeNs} />
+                      </td>
+                      <td className="cell-name" title={t.rootSpanName}>
+                        {t.rootSpanName || <span className="dim">—</span>}
+                      </td>
+                      <td>
+                        <ModelBadges providers={providers} models={models} />
+                      </td>
+                      <td className="num">{formatInt(t.spanCount)}</td>
+                      <td className="num">
+                        {t.errorCount > 0 ? (
+                          <span className="error-count">{t.errorCount}</span>
+                        ) : (
+                          <span className="dim">0</span>
+                        )}
+                      </td>
+                      <td className="num" title={`${formatInt(t.tokensInput)} in / ${formatInt(t.tokensOutput)} out`}>
+                        {formatTokens(t.tokensInput)}
+                        <span className="dim"> / </span>
+                        {formatTokens(t.tokensOutput)}
+                      </td>
+                      <td className="num">
+                        {formatCost(t.costTotalMicrocents)}
+                      </td>
+                      <td className="num">{formatDuration(t.durationNs)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="load-more">
+            {!done ? (
+              <button className="btn" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            ) : (
+              <span className="dim">
+                {traces.length} trace{traces.length === 1 ? '' : 's'} • end of list
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      {traceId && (
+        <TraceDrawer
+          slug={slug}
+          traceId={traceId}
+          tab={tab}
+          selectedSpanId={spanId}
+          onClose={closeDrawer}
+          onTabChange={setTab}
+          onSelectSpan={setSpan}
+        />
+      )}
+    </div>
+  )
+}
