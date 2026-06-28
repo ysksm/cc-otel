@@ -146,8 +146,16 @@ func buildTraceWhere(projectID string, beforeNs int64, f model.TraceFilter) (whe
 		args = append(args, f.MinDuration)
 	}
 	if f.Search != "" {
-		where = append(where, "(t.root_span_name ILIKE ? OR t.trace_id LIKE ?)")
-		args = append(args, "%"+f.Search+"%", f.Search+"%")
+		// Match the root span name, the trace id prefix, or any span's name /
+		// message content / tool name within the trace (fully local, no FTS
+		// extension required).
+		like := "%" + f.Search + "%"
+		where = append(where, `(t.root_span_name ILIKE ? OR t.trace_id LIKE ? OR t.trace_id IN (
+			SELECT trace_id FROM spans WHERE project_id = ? AND (
+				name ILIKE ? OR tool_name ILIKE ?
+				OR CAST(input_messages AS VARCHAR) ILIKE ?
+				OR CAST(output_messages AS VARCHAR) ILIKE ?)))`)
+		args = append(args, like, f.Search+"%", projectID, like, like, like, like)
 	}
 	if f.Provider != "" {
 		where = append(where, `CAST(t.providers AS VARCHAR) LIKE ?`)

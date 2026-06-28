@@ -174,7 +174,7 @@ export function TracesPage() {
         <input
           type="text"
           className="filter-search"
-          placeholder="Search name or trace id"
+          placeholder="Search name, id, or message content"
           value={filters.q}
           onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
         />
