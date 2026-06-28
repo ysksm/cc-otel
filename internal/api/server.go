@@ -77,6 +77,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/projects/{slug}/evaluations", s.handleCreateEvaluation)
 	mux.HandleFunc("POST /api/projects/{slug}/evaluations/{evalId}/run", s.handleRunEvaluation)
 
+	// Storage / retention (global)
+	mux.HandleFunc("GET /api/storage/stats", s.handleStorageStats)
+	mux.HandleFunc("POST /api/storage/cleanup", s.handleStorageCleanup)
+	mux.HandleFunc("POST /api/storage/purge", s.handleStoragePurge)
+
 	// Auth (opt-in)
 	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
 	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)

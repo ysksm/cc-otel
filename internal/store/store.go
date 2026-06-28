@@ -23,6 +23,7 @@ var migrationsFS embed.FS
 type Store struct {
 	db      *sql.DB
 	dataDir string
+	dbPath  string
 }
 
 // Open ensures libduckdb is available, opens the database file, applies the
@@ -46,7 +47,7 @@ func Open(dbPath string) (*Store, error) {
 	if dbPath != ":memory:" && dbPath != "" {
 		dir = filepath.Dir(dbPath)
 	}
-	s := &Store{db: db, dataDir: dir}
+	s := &Store{db: db, dataDir: dir, dbPath: dbPath}
 	if err := s.migrate(); err != nil {
 		_ = db.Close()
 		return nil, err

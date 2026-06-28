@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -63,6 +64,11 @@ func main() {
 		}
 	}
 
+	// Opt-in retention sweeper: periodically delete telemetry older than N days.
+	if days := envInt("CCOTEL_RETENTION_DAYS", 0); days > 0 {
+		startRetentionSweeper(st, days)
+	}
+
 	webFS, ok := webui.FS()
 	if !ok {
 		log.Printf("cc-otel: web UI not embedded; serving API + placeholder page")
@@ -96,4 +102,34 @@ func env(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+// startRetentionSweeper deletes telemetry older than days, at startup and daily.
+func startRetentionSweeper(st *store.Store, days int) {
+	sweep := func() {
+		cutoff := time.Now().Add(-time.Duration(days) * 24 * time.Hour).UnixNano()
+		if n, err := st.DeleteOlderThan(cutoff); err != nil {
+			log.Printf("cc-otel: retention sweep error: %v", err)
+		} else if n > 0 {
+			log.Printf("cc-otel: retention removed %d spans older than %d days", n, days)
+		}
+	}
+	log.Printf("cc-otel: retention enabled (keep %d days)", days)
+	sweep()
+	go func() {
+		t := time.NewTicker(24 * time.Hour)
+		defer t.Stop()
+		for range t.C {
+			sweep()
+		}
+	}()
 }

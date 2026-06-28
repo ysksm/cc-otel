@@ -242,6 +242,18 @@ type Signal struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+// StorageStats summarizes stored telemetry for the storage/retention UI.
+type StorageStats struct {
+	Spans       int64 `json:"spans"`
+	Traces      int64 `json:"traces"`
+	Embeddings  int64 `json:"embeddings"`
+	Scores      int64 `json:"scores"`
+	Signals     int64 `json:"signals"`
+	OldestNs    int64 `json:"oldestNs"`
+	NewestNs    int64 `json:"newestNs"`
+	DBSizeBytes int64 `json:"dbSizeBytes"`
+}
+
 // SearchHit is a semantic-search result span.
 type SearchHit struct {
 	TraceID string  `json:"traceId"`
