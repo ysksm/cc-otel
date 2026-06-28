@@ -87,6 +87,19 @@ export function formatInt(n: number): string {
   return n.toLocaleString()
 }
 
+/** Format a byte count as a human-readable size (e.g. "12.0 KB", "3.4 MB"). */
+export function formatBytes(n: number): string {
+  if (n == null || Number.isNaN(n) || n <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+  let val = n
+  let i = 0
+  while (val >= 1024 && i < units.length - 1) {
+    val /= 1024
+    i++
+  }
+  return `${i === 0 ? Math.round(val) : val.toFixed(1)} ${units[i]}`
+}
+
 /** Format an ISO-8601 timestamp string as a relative time like "3m ago". */
 export function formatRelativeIso(iso: string, now: number = Date.now()): string {
   const ms = Date.parse(iso)

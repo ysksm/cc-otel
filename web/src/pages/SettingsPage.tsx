@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, ApiError, type APIKey } from '../lib/api'
-import { formatRelativeIso } from '../lib/format'
+import { formatBytes, formatInt, formatRelativeIso } from '../lib/format'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../hooks/useAuth'
-import { Badge, EmptyState, ErrorBox, Spinner } from '../components/common'
+import { Badge, EmptyState, ErrorBox, RelativeTime, Spinner, Stat } from '../components/common'
 
 export function SettingsPage() {
   const { slug = '' } = useParams()
@@ -116,6 +116,8 @@ export function SettingsPage() {
         </p>
         <ExporterSnippet />
       </section>
+
+      <StorageSection />
     </div>
   )
 }
@@ -457,6 +459,129 @@ function EvaluationsSection({ slug }: { slug: string }) {
             </tbody>
           </table>
         </div>
+      )}
+    </section>
+  )
+}
+
+function StorageSection() {
+  const { data, loading, error, reload } = useAsync(() => api.storageStats(), [])
+  const stats = data
+
+  const [days, setDays] = useState(30)
+  const [cleaning, setCleaning] = useState(false)
+  const [purging, setPurging] = useState(false)
+  const [actionError, setActionError] = useState<Error | undefined>()
+  const [note, setNote] = useState('')
+
+  const showNote = (msg: string) => {
+    setNote(msg)
+    setTimeout(() => setNote(''), 4000)
+  }
+
+  const onCleanup = async () => {
+    if (cleaning || purging) return
+    const n = Math.max(1, Math.floor(days))
+    if (!window.confirm(`Delete telemetry older than ${n} days?`)) return
+    setCleaning(true)
+    setActionError(undefined)
+    try {
+      const res = await api.storageCleanup(n)
+      showNote(`Deleted ${res.deletedSpans} spans`)
+      reload()
+    } catch (err) {
+      setActionError(err instanceof Error ? err : new Error(String(err)))
+    } finally {
+      setCleaning(false)
+    }
+  }
+
+  const onPurge = async () => {
+    if (cleaning || purging) return
+    if (
+      !window.confirm(
+        'Delete ALL telemetry (traces, spans, scores, signals, embeddings)? This cannot be undone.',
+      )
+    )
+      return
+    setPurging(true)
+    setActionError(undefined)
+    try {
+      const res = await api.storagePurge()
+      showNote(`Deleted ${res.deletedSpans} spans`)
+      reload()
+    } catch (err) {
+      setActionError(err instanceof Error ? err : new Error(String(err)))
+    } finally {
+      setPurging(false)
+    }
+  }
+
+  return (
+    <section className="settings-section">
+      <h2>Storage</h2>
+      <p className="dim section-desc">
+        Telemetry stored across all projects. Cleanup and purge are global and cannot be undone.
+      </p>
+
+      {loading && <Spinner label="Loading storage stats…" />}
+      {error && <ErrorBox error={error} />}
+
+      {!loading && !error && stats && (
+        <>
+          <div className="stat-grid">
+            <Stat label="Spans" value={formatInt(stats.spans)} />
+            <Stat label="Traces" value={formatInt(stats.traces)} />
+            <Stat label="Embeddings" value={formatInt(stats.embeddings)} />
+            <Stat label="Scores" value={formatInt(stats.scores)} />
+            <Stat label="Signals" value={formatInt(stats.signals)} />
+            <Stat
+              label="Database size"
+              value={stats.dbSizeBytes > 0 ? formatBytes(stats.dbSizeBytes) : 'in-memory'}
+            />
+          </div>
+
+          <div className="storage-range">
+            <span className="stat-label">Data range</span>
+            <span className="stat-value">
+              {stats.oldestNs > 0 ? (
+                <>
+                  <RelativeTime ns={stats.oldestNs} /> <span className="dim">→</span>{' '}
+                  <RelativeTime ns={stats.newestNs} />
+                </>
+              ) : (
+                <span className="dim">no data</span>
+              )}
+            </span>
+          </div>
+
+          <div className="storage-actions">
+            <div className="storage-cleanup">
+              <span>Delete data older than</span>
+              <input
+                type="number"
+                min={1}
+                value={days}
+                onChange={(e) => setDays(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                className="storage-days"
+              />
+              <span>days</span>
+              <button className="btn" onClick={onCleanup} disabled={cleaning || purging}>
+                {cleaning ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+            <button
+              className="btn btn-danger"
+              onClick={onPurge}
+              disabled={cleaning || purging}
+            >
+              {purging ? 'Purging…' : 'Purge all telemetry'}
+            </button>
+          </div>
+
+          {note && <div className="storage-note">{note}</div>}
+          {actionError && <ErrorBox error={actionError} />}
+        </>
       )}
     </section>
   )

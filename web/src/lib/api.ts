@@ -239,6 +239,17 @@ export interface Account {
   createdAt: string
 }
 
+export interface StorageStats {
+  spans: number
+  traces: number
+  embeddings: number
+  scores: number
+  signals: number
+  oldestNs: number
+  newestNs: number
+  dbSizeBytes: number
+}
+
 export interface Me {
   enabled: boolean
   authenticated: boolean
@@ -482,5 +493,17 @@ export const api = {
     role: 'admin' | 'member'
   }): Promise<Account> {
     return request('/api/accounts', { method: 'POST', body: JSON.stringify(body) })
+  },
+  storageStats(): Promise<StorageStats> {
+    return request('/api/storage/stats')
+  },
+  storageCleanup(days: number): Promise<{ deletedSpans: number }> {
+    return request('/api/storage/cleanup', {
+      method: 'POST',
+      body: JSON.stringify({ days }),
+    })
+  },
+  storagePurge(): Promise<{ deletedSpans: number }> {
+    return request('/api/storage/purge', { method: 'POST', body: JSON.stringify({}) })
   },
 }
