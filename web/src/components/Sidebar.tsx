@@ -1,8 +1,11 @@
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { useProjects } from '../hooks/useProjects'
+import { useAuth } from '../hooks/useAuth'
+import { Badge } from './common'
 
 export function Sidebar() {
   const { projects } = useProjects()
+  const auth = useAuth()
   const params = useParams()
   const navigate = useNavigate()
   const currentSlug = params.slug ?? ''
@@ -66,6 +69,21 @@ export function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
+        {auth.enabled && auth.account && (
+          <div className="sidebar-account">
+            <div className="sidebar-account-info">
+              <span className="sidebar-account-email" title={auth.account.email}>
+                {auth.account.email}
+              </span>
+              <Badge tone={auth.account.role === 'admin' ? 'provider' : 'muted'}>
+                {auth.account.role}
+              </Badge>
+            </div>
+            <button className="logout-button" onClick={() => void auth.logout()}>
+              Log out
+            </button>
+          </div>
+        )}
         <span className="dim">local observability</span>
       </div>
     </aside>

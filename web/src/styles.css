@@ -113,6 +113,7 @@ code {
 
 select,
 input[type="text"],
+input[type="password"],
 input[type="number"] {
   background: var(--bg-3);
   color: var(--text);
@@ -125,8 +126,12 @@ input[type="number"] {
 }
 select:focus,
 input[type="text"]:focus,
+input[type="password"]:focus,
 input[type="number"]:focus {
   border-color: var(--accent-2);
+}
+input:disabled {
+  opacity: 0.5;
 }
 select:disabled {
   opacity: 0.5;
@@ -1334,4 +1339,134 @@ select:disabled {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* ---------- Auth: loading gate ---------- */
+.auth-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+/* ---------- Auth: login screen ---------- */
+.login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 24px;
+  background: var(--bg);
+}
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 340px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 26px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.login-brand .brand-name {
+  font-weight: 600;
+}
+.login-subtitle {
+  margin: -8px 0 4px;
+  font-size: 13px;
+}
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.login-error {
+  color: var(--red);
+  font-size: 12.5px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.login-submit {
+  margin-top: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* ---------- Auth: sidebar account ---------- */
+.sidebar-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-account-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sidebar-account-email {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logout-button {
+  background: var(--bg-3);
+  color: var(--text-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+.logout-button:hover {
+  background: var(--bg-elev);
+  color: var(--text);
+}
+
+/* ---------- Auth: users section ---------- */
+.create-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.user-form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.user-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 160px;
+}
+.user-field-role {
+  flex: 0 1 140px;
+  min-width: 120px;
+}
+.user-form-footer {
+  display: flex;
 }

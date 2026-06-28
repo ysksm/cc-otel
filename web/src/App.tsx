@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProjectsProvider } from './hooks/useProjects'
+import { AuthProvider, useAuth } from './hooks/useAuth'
 import { Layout } from './components/Layout'
+import { Spinner } from './components/common'
 import { HomePage } from './pages/HomePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { TracesPage } from './pages/TracesPage'
@@ -11,8 +13,35 @@ import { ToolDetailPage } from './pages/ToolDetailPage'
 import { SignalsPage } from './pages/SignalsPage'
 import { MonitorsPage } from './pages/MonitorsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { LoginPage } from './pages/LoginPage'
 
 export function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  )
+}
+
+function AuthGate() {
+  const { loading, enabled, authenticated } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="auth-loading">
+        <Spinner label="Loading…" />
+      </div>
+    )
+  }
+
+  if (enabled && !authenticated) {
+    return <LoginPage />
+  }
+
+  return <AppRoutes />
+}
+
+function AppRoutes() {
   return (
     <ProjectsProvider>
       <Routes>

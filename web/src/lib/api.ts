@@ -232,6 +232,19 @@ export interface Signal {
   createdAt: string
 }
 
+export interface Account {
+  id: string
+  email: string
+  role: 'admin' | 'member'
+  createdAt: string
+}
+
+export interface Me {
+  enabled: boolean
+  authenticated: boolean
+  account?: Account
+}
+
 export interface TracesResponse {
   items: TraceSummary[]
   nextCursor: string
@@ -252,6 +265,15 @@ export class ApiError extends Error {
   }
 }
 
+// Global 401 handler. The AuthProvider registers a callback here so a session
+// that expires mid-use re-triggers an auth refresh, dropping the user back to
+// the login screen. The /api/auth/* endpoints are exempt so login failures
+// (expected 401s) don't fire it.
+let onUnauthorized: (() => void) | undefined
+export function setOnUnauthorized(handler: (() => void) | undefined): void {
+  onUnauthorized = handler
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
@@ -263,6 +285,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       body = await res.text()
     } catch {
       /* ignore */
+    }
+    if (res.status === 401 && !path.startsWith('/api/auth/')) {
+      onUnauthorized?.()
     }
     throw new ApiError(res.status, body)
   }
@@ -405,5 +430,27 @@ export const api = {
   },
   listSignals(slug: string): Promise<{ items: Signal[] }> {
     return request(`/api/projects/${encodeURIComponent(slug)}/signals`)
+  },
+  getMe(): Promise<Me> {
+    return request('/api/auth/me')
+  },
+  login(email: string, password: string): Promise<{ account: Account }> {
+    return request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+  },
+  logout(): Promise<{ ok: true }> {
+    return request('/api/auth/logout', { method: 'POST', body: JSON.stringify({}) })
+  },
+  listAccounts(): Promise<{ items: Account[] }> {
+    return request('/api/accounts')
+  },
+  createAccount(body: {
+    email: string
+    password: string
+    role: 'admin' | 'member'
+  }): Promise<Account> {
+    return request('/api/accounts', { method: 'POST', body: JSON.stringify(body) })
   },
 }

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { api, type APIKey } from '../lib/api'
+import { api, ApiError, type APIKey } from '../lib/api'
 import { formatRelativeIso } from '../lib/format'
 import { useAsync } from '../hooks/useAsync'
+import { useAuth } from '../hooks/useAuth'
 import { Badge, EmptyState, ErrorBox, Spinner } from '../components/common'
 
 export function SettingsPage() {
   const { slug = '' } = useParams()
+  const auth = useAuth()
   const { data, loading, error, reload } = useAsync(() => api.listApiKeys(slug), [slug])
   const keys = data?.items ?? []
 
@@ -104,6 +106,8 @@ export function SettingsPage() {
 
       <EvaluationsSection slug={slug} />
 
+      {auth.enabled && auth.account?.role === 'admin' && <UsersSection />}
+
       <section className="settings-section">
         <h2>Send traces</h2>
         <p className="dim section-desc">
@@ -165,6 +169,133 @@ OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/protobuf`
         Endpoint: <code>{ENDPOINT}</code> · Header: <code>Authorization: Bearer &lt;token&gt;</code>
       </p>
     </div>
+  )
+}
+
+function UsersSection() {
+  const { data, loading, error, reload } = useAsync(() => api.listAccounts(), [])
+  const accounts = data?.items ?? []
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState<'admin' | 'member'>('member')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<Error | undefined>()
+
+  const onCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || password.length < 6 || creating) return
+    setCreating(true)
+    setCreateError(undefined)
+    try {
+      await api.createAccount({ email: trimmedEmail, password, role })
+      setEmail('')
+      setPassword('')
+      setRole('member')
+      reload()
+    } catch (err) {
+      setCreateError(err instanceof Error ? err : new Error(String(err)))
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  // If listing is forbidden (not admin) or auth is disabled server-side, show a
+  // small note instead of an error box.
+  if (error instanceof ApiError && (error.status === 403 || error.status === 400)) {
+    return (
+      <section className="settings-section">
+        <h2>Users</h2>
+        <p className="dim section-desc">User management is unavailable.</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="settings-section">
+      <h2>Users</h2>
+      <p className="dim section-desc">
+        Manage accounts that can sign in to cc-otel. Admins can create accounts and manage users;
+        members have read access to the app.
+      </p>
+
+      <form className="create-user-form" onSubmit={onCreate}>
+        <div className="user-form-row">
+          <label className="user-field">
+            <span className="ann-label">Email</span>
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="teammate@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label className="user-field">
+            <span className="ann-label">Password</span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="min 6 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <label className="user-field user-field-role">
+            <span className="ann-label">Role</span>
+            <select value={role} onChange={(e) => setRole(e.target.value as 'admin' | 'member')}>
+              <option value="member">member</option>
+              <option value="admin">admin</option>
+            </select>
+          </label>
+        </div>
+        <div className="user-form-footer">
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={creating || !email.trim() || password.length < 6}
+          >
+            {creating ? 'Creating…' : 'Create user'}
+          </button>
+        </div>
+      </form>
+      {createError && <ErrorBox error={createError} />}
+
+      {loading && <Spinner label="Loading users…" />}
+      {error && <ErrorBox error={error} />}
+
+      {!loading && !error && accounts.length === 0 && (
+        <EmptyState title="No users">
+          <p>Create the first account above.</p>
+        </EmptyState>
+      )}
+
+      {!loading && !error && accounts.length > 0 && (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.email}</td>
+                  <td>
+                    <Badge tone={a.role === 'admin' ? 'provider' : 'muted'}>{a.role}</Badge>
+                  </td>
+                  <td title={a.createdAt}>{formatRelativeIso(a.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   )
 }
 
