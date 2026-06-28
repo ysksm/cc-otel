@@ -207,6 +207,15 @@ type SessionSummary struct {
 	UserID              string `json:"userId"`
 }
 
+// Account is a dashboard login (opt-in auth). PasswordHash is never serialized.
+type Account struct {
+	ID           string    `json:"id"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"-"`
+	Role         string    `json:"role"` // admin | member
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
 // Monitor is a threshold rule evaluated against traces.
 type Monitor struct {
 	ID            string    `json:"id"`

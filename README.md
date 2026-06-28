@@ -65,7 +65,7 @@ export CCOTEL_LLM_MODEL=claude-sonnet-4-6
 
 ## Quick start
 
-Requirements: **Go 1.24+** and **Node 20+** (for the web UI).
+Requirements: **Go 1.25+** and **Node 20+** (for the web UI).
 
 ```sh
 # 1) Build the SPA and the single binary (embeds the UI)

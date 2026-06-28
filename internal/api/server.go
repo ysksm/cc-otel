@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ysksm/cc-otel/internal/auth"
 	"github.com/ysksm/cc-otel/internal/llm"
 	"github.com/ysksm/cc-otel/internal/store"
 )
@@ -17,14 +18,24 @@ import (
 type Server struct {
 	store       *store.Store
 	workspaceID string
-	webFS       fs.FS      // embedded SPA (may be nil if not built)
-	llmCfg      llm.Config // default LLM config for evaluations (from env)
+	webFS       fs.FS       // embedded SPA (may be nil if not built)
+	llmCfg      llm.Config  // default LLM config for evaluations (from env)
+	auth        auth.Config // opt-in dashboard auth (from env)
 }
 
 // New constructs a Server bound to the default local workspace.
 func New(st *store.Store, workspaceID string, webFS fs.FS) *Server {
-	return &Server{store: st, workspaceID: workspaceID, webFS: webFS, llmCfg: llm.ConfigFromEnv()}
+	return &Server{
+		store:       st,
+		workspaceID: workspaceID,
+		webFS:       webFS,
+		llmCfg:      llm.ConfigFromEnv(),
+		auth:        auth.ConfigFromEnv(),
+	}
 }
+
+// AuthEnabled reports whether dashboard auth is on.
+func (s *Server) AuthEnabled() bool { return s.auth.Enabled }
 
 // Handler returns the root HTTP handler.
 func (s *Server) Handler() http.Handler {
@@ -61,10 +72,17 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/projects/{slug}/evaluations", s.handleCreateEvaluation)
 	mux.HandleFunc("POST /api/projects/{slug}/evaluations/{evalId}/run", s.handleRunEvaluation)
 
+	// Auth (opt-in)
+	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
+	mux.HandleFunc("GET /api/auth/me", s.handleMe)
+	mux.HandleFunc("GET /api/accounts", s.handleListAccounts)
+	mux.HandleFunc("POST /api/accounts", s.handleCreateAccount)
+
 	// Static SPA (and client-side routing fallback)
 	mux.HandleFunc("/", s.handleStatic)
 
-	return withCORS(mux)
+	return withCORS(s.authGate(mux))
 }
 
 // withCORS allows the Vite dev server (and any local origin) to call the API.

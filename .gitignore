@@ -1,7 +1,7 @@
-# Build output
+# Build output (anchored so they don't match the cmd/ccotel/ source dir)
 /bin/
-ccotel
-ccotel.exe
+/ccotel
+/ccotel.exe
 
 # Local data (DuckDB file, downloaded native libs, dev key)
 /data/
