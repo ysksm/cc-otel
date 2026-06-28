@@ -29,19 +29,56 @@ cached at runtime (see `internal/duckdblib`).
 
 ## Status
 
-Milestone 1 (in progress): OTLP ingestion → DuckDB → browse traces/spans/sessions.
+Milestone 1: OTLP ingestion → DuckDB → browse traces / spans / sessions.
 
-Implemented so far:
+Implemented:
 - Cross-platform purego DuckDB binding + runtime `libduckdb` locator/downloader
-- DuckDB schema (`spans` table + `traces`/`sessions` aggregate views) and the
-  workspace/project/api-key model with default seeding
+- DuckDB schema (`spans` table + `traces`/`sessions` aggregate views), the
+  workspace / project / api-key model with default seeding
+- OTLP/HTTP ingestion (`POST /v1/traces`, protobuf + JSON) with GenAI
+  semantic-convention enrichment (provider/model/operation, additive token
+  normalization, cost estimation, session/user/tool/messages) and a REST API
+- React SPA: projects, traces & sessions lists, trace detail with span waterfall
 
-## Development
+## Quick start
 
-Requirements: Go 1.24+. (Node 20+ for the web UI, once added.)
+Requirements: **Go 1.24+** and **Node 20+** (for the web UI).
 
 ```sh
-go test ./...        # on Linux, runs with CGO_ENABLED=1 for dlopen
+# 1) Build the SPA and the single binary (embeds the UI)
+make build
+
+# 2) Run it (auto-downloads the matching libduckdb on first run)
+make run
+# -> http://localhost:8080  (prints an ingestion API key on first boot)
+
+# 3) Send sample traces, then open the UI
+make sample          # or: ./scripts/send-sample-traces.sh
+```
+
+Point any OpenTelemetry exporter at `http://localhost:8080/v1/traces` with
+`Authorization: Bearer <api-key>` (the key is printed on first boot and saved to
+`./data/dev-api-key.txt`).
+
+### Development (hot reload)
+
+```sh
+make dev   # Go API on :8080 + Vite dev server on :5173 (proxies /api, /v1)
+```
+
+### Cross-compile (CGO-free) for Windows + macOS
+
+```sh
+make cross  # writes dist/ccotel-{windows-amd64.exe,darwin-amd64,darwin-arm64,linux-amd64}
+```
+
+Each binary is pure-Go; the matching native `libduckdb` is downloaded and cached
+on first run (or provide your own via `DUCKDB_LIBRARY_PATH`).
+
+### Tests
+
+```sh
+make test   # on Linux this runs with CGO_ENABLED=1 (purego needs dlopen)
 ```
 
 ## License
