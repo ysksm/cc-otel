@@ -1,0 +1,26 @@
+# Build output
+/bin/
+ccotel
+ccotel.exe
+
+# Local data (DuckDB file, downloaded native libs, dev key)
+/data/
+*.duckdb
+*.duckdb.wal
+dev-api-key.txt
+libduckdb.so
+libduckdb.dylib
+duckdb.dll
+*.zip
+
+# Frontend
+web/node_modules/
+web/dist/
+
+# Editor / OS
+.DS_Store
+*.swp
+
+# Scratch
+e.txt
+err.txt
