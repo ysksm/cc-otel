@@ -29,18 +29,23 @@ cached at runtime (see `internal/duckdblib`).
 
 ## Status
 
-Milestone 1: OTLP ingestion → DuckDB → browse traces / spans / sessions.
-
 Implemented:
 - Cross-platform purego DuckDB binding + runtime `libduckdb` locator/downloader
-- DuckDB schema (`spans` table + `traces`/`sessions` aggregate views), the
-  workspace / project / api-key model with default seeding
-- OTLP/HTTP ingestion (`POST /v1/traces`, protobuf + JSON) with GenAI
+- DuckDB schema (`spans` + `traces`/`sessions` views), workspace / project /
+  api-key model with default seeding
+- **OTLP/HTTP ingestion** (`POST /v1/traces`, protobuf + JSON) with GenAI
   semantic-convention enrichment (provider/model/operation, additive token
-  normalization, cost estimation, session/user/tool/messages) and a REST API
-- React SPA: projects, traces & sessions lists, trace detail with span waterfall
-- **Evaluations & scores**: manual annotations on traces, plus LLM-as-judge
-  evaluations (Scores tab + Evaluations settings)
+  normalization, cost estimation, session/user/tool/messages)
+- **Observability UI** (React SPA): analytics **Dashboard** (charts), **Traces**
+  & **Sessions** with filters + content search + score badges, **trace detail**
+  (span waterfall, conversation, scores), **Users** & **Tools** aggregations
+- **Evaluations & scores**: manual annotations + LLM-as-judge evaluations
+- **Monitors & Signals**: threshold rules evaluated on ingest → in-app signals
+- **Semantic search**: opt-in embeddings (cosine in Go, no extension)
+- **Auth** (opt-in): login + accounts management
+- **Retention/storage**: stats, delete-older-than, purge; optional auto-sweeper
+- **Export**: traces CSV/JSON, single-trace JSON
+- CSV/JSON/SVG, single static binary, CGO-free cross-compile, CI
 
 ## Evaluations (LLM-as-judge)
 
