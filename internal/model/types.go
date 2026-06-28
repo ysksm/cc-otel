@@ -207,6 +207,32 @@ type SessionSummary struct {
 	UserID              string `json:"userId"`
 }
 
+// Monitor is a threshold rule evaluated against traces.
+type Monitor struct {
+	ID            string    `json:"id"`
+	WorkspaceID   string    `json:"workspaceId"`
+	ProjectID     string    `json:"projectId"`
+	Name          string    `json:"name"`
+	ConditionType string    `json:"conditionType"` // trace_error|cost_gt|latency_gt|tokens_gt|model_used
+	Threshold     float64   `json:"threshold"`
+	ValueStr      string    `json:"valueStr"`
+	Enabled       bool      `json:"enabled"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
+
+// Signal is a fired monitor occurrence on a trace.
+type Signal struct {
+	ID          string    `json:"id"`
+	ProjectID   string    `json:"-"`
+	MonitorID   string    `json:"monitorId"`
+	MonitorName string    `json:"monitorName"`
+	TraceID     string    `json:"traceId"`
+	SessionID   string    `json:"sessionId"`
+	Description string    `json:"description"`
+	Value       float64   `json:"value"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
 // AnalyticsPoint is one time-bucket of project metrics.
 type AnalyticsPoint struct {
 	BucketStartNs       int64 `json:"bucketStartNs"`

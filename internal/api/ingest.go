@@ -76,6 +76,25 @@ func (s *Server) handleIngestTraces(w http.ResponseWriter, r *http.Request) {
 			writeOTLPError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		// Best-effort: evaluate monitors against the affected traces. Never fail
+		// ingestion because of monitor evaluation.
+		byProject := map[string]map[string]struct{}{}
+		for _, sp := range spans {
+			if sp.TraceID == "" {
+				continue
+			}
+			if byProject[sp.ProjectID] == nil {
+				byProject[sp.ProjectID] = map[string]struct{}{}
+			}
+			byProject[sp.ProjectID][sp.TraceID] = struct{}{}
+		}
+		for pid, ids := range byProject {
+			traceIDs := make([]string, 0, len(ids))
+			for id := range ids {
+				traceIDs = append(traceIDs, id)
+			}
+			_, _ = s.store.EvaluateMonitorsForTraces(pid, traceIDs)
+		}
 	}
 	s.store.TouchAPIKey(keyID)
 
