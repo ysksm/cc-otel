@@ -48,7 +48,7 @@ func TestStoreEndToEnd(t *testing.T) {
 		t.Fatalf("insert spans: %v", err)
 	}
 
-	traces, err := s.ListTraces(proj.ID, 50, 0)
+	traces, err := s.ListTraces(proj.ID, 50, 0, model.TraceFilter{})
 	if err != nil {
 		t.Fatalf("list traces: %v", err)
 	}

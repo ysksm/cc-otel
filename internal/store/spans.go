@@ -88,34 +88,65 @@ func (s *Store) InsertSpans(spans []model.Span) error {
 	return tx.Commit()
 }
 
-// traceSelect lists the columns of the traces view in TraceSummary order.
-const traceSelect = `trace_id, session_id, span_count, error_count, min_start_time_ns, max_end_time_ns,
-	duration_ns, tokens_input, tokens_output, tokens_cache_read, tokens_cache_create, tokens_reasoning,
-	cost_total_microcents, CAST(models AS VARCHAR), CAST(providers AS VARCHAR), root_span_name, root_span_id`
+// traceFrom joins the traces view with the per-trace score rollup.
+const traceFrom = `traces t LEFT JOIN trace_scores ts ON t.project_id = ts.project_id AND t.trace_id = ts.trace_id`
+
+// traceCols lists the (qualified) columns in TraceSummary scan order, including
+// the score rollup.
+const traceCols = `t.trace_id, t.session_id, t.span_count, t.error_count, t.min_start_time_ns, t.max_end_time_ns,
+	t.duration_ns, t.tokens_input, t.tokens_output, t.tokens_cache_read, t.tokens_cache_create, t.tokens_reasoning,
+	t.cost_total_microcents, CAST(t.models AS VARCHAR), CAST(t.providers AS VARCHAR), t.root_span_name, t.root_span_id,
+	coalesce(ts.score_count, 0), coalesce(ts.passed_count, 0), coalesce(ts.failed_count, 0), ts.avg_value`
 
 func scanTrace(sc interface{ Scan(...any) error }) (model.TraceSummary, error) {
 	var t model.TraceSummary
+	var avg sql.NullFloat64
 	err := sc.Scan(&t.TraceID, &t.SessionID, &t.SpanCount, &t.ErrorCount, &t.StartTimeNs, &t.EndTimeNs,
 		&t.DurationNs, &t.TokensInput, &t.TokensOutput, &t.TokensCacheRead, &t.TokensCacheCreate, &t.TokensReasoning,
-		&t.CostTotalMicrocents, &t.Models, &t.Providers, &t.RootSpanName, &t.RootSpanID)
+		&t.CostTotalMicrocents, &t.Models, &t.Providers, &t.RootSpanName, &t.RootSpanID,
+		&t.ScoreCount, &t.PassedCount, &t.FailedCount, &avg)
+	if err == nil && avg.Valid {
+		v := avg.Float64
+		t.AvgScore = &v
+	}
 	return t, err
 }
 
-// ListTraces returns trace summaries for a project, newest first. beforeNs is a
-// keyset cursor on min_start_time_ns (0 = from newest).
-func (s *Store) ListTraces(projectID string, limit int, beforeNs int64) ([]model.TraceSummary, error) {
+// ListTraces returns trace summaries for a project, newest first, applying the
+// filter. beforeNs is a keyset cursor on min_start_time_ns (0 = from newest).
+func (s *Store) ListTraces(projectID string, limit int, beforeNs int64, f model.TraceFilter) ([]model.TraceSummary, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
+	where := []string{"t.project_id = ?"}
 	args := []any{projectID}
-	where := "project_id = ?"
 	if beforeNs > 0 {
-		where += " AND min_start_time_ns < ?"
+		where = append(where, "t.min_start_time_ns < ?")
 		args = append(args, beforeNs)
 	}
+	if f.ErrorsOnly {
+		where = append(where, "t.error_count > 0")
+	}
+	if f.MinDuration > 0 {
+		where = append(where, "t.duration_ns >= ?")
+		args = append(args, f.MinDuration)
+	}
+	if f.Search != "" {
+		where = append(where, "(t.root_span_name ILIKE ? OR t.trace_id LIKE ?)")
+		args = append(args, "%"+f.Search+"%", f.Search+"%")
+	}
+	if f.Provider != "" {
+		where = append(where, `CAST(t.providers AS VARCHAR) LIKE ?`)
+		args = append(args, `%"`+f.Provider+`"%`)
+	}
+	if f.Model != "" {
+		where = append(where, `CAST(t.models AS VARCHAR) LIKE ?`)
+		args = append(args, `%"`+f.Model+`"%`)
+	}
 	args = append(args, limit)
-	rows, err := s.db.Query("SELECT "+traceSelect+" FROM traces WHERE "+where+
-		" ORDER BY min_start_time_ns DESC LIMIT ?", args...)
+	q := "SELECT " + traceCols + " FROM " + traceFrom + " WHERE " + strings.Join(where, " AND ") +
+		" ORDER BY t.min_start_time_ns DESC LIMIT ?"
+	rows, err := s.db.Query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -131,9 +162,9 @@ func (s *Store) ListTraces(projectID string, limit int, beforeNs int64) ([]model
 	return out, rows.Err()
 }
 
-// GetTrace returns a single trace summary.
+// GetTrace returns a single trace summary (with score rollup).
 func (s *Store) GetTrace(projectID, traceID string) (model.TraceSummary, error) {
-	row := s.db.QueryRow("SELECT "+traceSelect+" FROM traces WHERE project_id = ? AND trace_id = ?", projectID, traceID)
+	row := s.db.QueryRow("SELECT "+traceCols+" FROM "+traceFrom+" WHERE t.project_id = ? AND t.trace_id = ?", projectID, traceID)
 	t, err := scanTrace(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return t, ErrNotFound

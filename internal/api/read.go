@@ -73,7 +73,15 @@ func (s *Server) handleListTraces(w http.ResponseWriter, r *http.Request) {
 	}
 	limit := atoiDefault(r.URL.Query().Get("limit"), 50)
 	before := atoi64Default(r.URL.Query().Get("before"), 0)
-	traces, err := s.store.ListTraces(p.ID, limit, before)
+	q := r.URL.Query()
+	filter := model.TraceFilter{
+		Search:      q.Get("q"),
+		Provider:    q.Get("provider"),
+		Model:       q.Get("model"),
+		ErrorsOnly:  q.Get("errors") == "true" || q.Get("errorsOnly") == "true",
+		MinDuration: atoi64Default(q.Get("minDuration"), 0),
+	}
+	traces, err := s.store.ListTraces(p.ID, limit, before, filter)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

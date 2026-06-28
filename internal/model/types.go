@@ -174,6 +174,20 @@ type TraceSummary struct {
 	Providers           string `json:"providers"` // JSON array
 	RootSpanName        string `json:"rootSpanName"`
 	RootSpanID          string `json:"rootSpanId"`
+	// Score rollup (from the trace_scores view; zero when no scores).
+	ScoreCount   int64    `json:"scoreCount"`
+	PassedCount  int64    `json:"passedCount"`
+	FailedCount  int64    `json:"failedCount"`
+	AvgScore     *float64 `json:"avgScore,omitempty"`
+}
+
+// TraceFilter narrows a traces query. Empty fields are ignored.
+type TraceFilter struct {
+	Search      string // matches root span name or trace id prefix
+	Provider    string // exact provider present on the trace
+	Model       string // exact model present on the trace
+	ErrorsOnly  bool   // only traces with at least one error span
+	MinDuration int64  // minimum trace duration in ns
 }
 
 // SessionSummary is an aggregated row from the sessions view.
