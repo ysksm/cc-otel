@@ -13,6 +13,9 @@ help: ## Show this help
 
 web: ## Build the React SPA into internal/webui/dist
 	cd $(WEB) && npm install && npm run build
+	@# vite's emptyOutDir wipes the tracked placeholder; restore it so a fresh
+	@# clone (with no built SPA) still compiles the //go:embed dist directive.
+	@printf 'placeholder - replaced by Vite build output\n' > internal/webui/dist/.gitkeep
 
 build: web ## Build the single binary (embeds the SPA)
 	CGO_ENABLED=$(CGO) $(GO) build -o $(BIN) ./cmd/ccotel
