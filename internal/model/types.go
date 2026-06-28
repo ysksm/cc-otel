@@ -206,3 +206,42 @@ type SessionSummary struct {
 	Providers           string `json:"providers"`
 	UserID              string `json:"userId"`
 }
+
+// AnalyticsPoint is one time-bucket of project metrics.
+type AnalyticsPoint struct {
+	BucketStartNs       int64 `json:"bucketStartNs"`
+	TraceCount          int64 `json:"traceCount"`
+	SpanCount           int64 `json:"spanCount"`
+	ErrorCount          int64 `json:"errorCount"`
+	CostTotalMicrocents int64 `json:"costTotalMicrocents"`
+	TokensInput         int64 `json:"tokensInput"`
+	TokensOutput        int64 `json:"tokensOutput"`
+	AvgDurationNs       int64 `json:"avgDurationNs"`
+}
+
+// AnalyticsTotals is the aggregate over the whole range.
+type AnalyticsTotals struct {
+	TraceCount          int64 `json:"traceCount"`
+	SpanCount           int64 `json:"spanCount"`
+	ErrorCount          int64 `json:"errorCount"`
+	CostTotalMicrocents int64 `json:"costTotalMicrocents"`
+	TokensInput         int64 `json:"tokensInput"`
+	TokensOutput        int64 `json:"tokensOutput"`
+}
+
+// TopModel is a model ranked by cost within the range.
+type TopModel struct {
+	Model               string `json:"model"`
+	CostTotalMicrocents int64  `json:"costTotalMicrocents"`
+	TraceCount          int64  `json:"traceCount"`
+}
+
+// Analytics is the project dashboard payload.
+type Analytics struct {
+	Range     string           `json:"range"`
+	BucketNs  int64            `json:"bucketNs"`
+	SinceNs   int64            `json:"sinceNs"`
+	Totals    AnalyticsTotals  `json:"totals"`
+	Series    []AnalyticsPoint `json:"series"`
+	TopModels []TopModel       `json:"topModels"`
+}
