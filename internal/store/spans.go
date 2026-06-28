@@ -118,8 +118,22 @@ func (s *Store) ListTraces(projectID string, limit int, beforeNs int64, f model.
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	where := []string{"t.project_id = ?"}
-	args := []any{projectID}
+	return s.queryTraces(projectID, beforeNs, f, limit)
+}
+
+// ExportTraces returns up to a large cap of trace summaries matching the filter
+// (used for CSV/JSON export, which is not paginated).
+func (s *Store) ExportTraces(projectID string, f model.TraceFilter, limit int) ([]model.TraceSummary, error) {
+	if limit <= 0 || limit > 50000 {
+		limit = 50000
+	}
+	return s.queryTraces(projectID, 0, f, limit)
+}
+
+// buildTraceWhere builds the WHERE clauses + args for a traces query (aliased t).
+func buildTraceWhere(projectID string, beforeNs int64, f model.TraceFilter) (where []string, args []any) {
+	where = []string{"t.project_id = ?"}
+	args = []any{projectID}
 	if beforeNs > 0 {
 		where = append(where, "t.min_start_time_ns < ?")
 		args = append(args, beforeNs)
@@ -143,6 +157,11 @@ func (s *Store) ListTraces(projectID string, limit int, beforeNs int64, f model.
 		where = append(where, `CAST(t.models AS VARCHAR) LIKE ?`)
 		args = append(args, `%"`+f.Model+`"%`)
 	}
+	return where, args
+}
+
+func (s *Store) queryTraces(projectID string, beforeNs int64, f model.TraceFilter, limit int) ([]model.TraceSummary, error) {
+	where, args := buildTraceWhere(projectID, beforeNs, f)
 	args = append(args, limit)
 	q := "SELECT " + traceCols + " FROM " + traceFrom + " WHERE " + strings.Join(where, " AND ") +
 		" ORDER BY t.min_start_time_ns DESC LIMIT ?"

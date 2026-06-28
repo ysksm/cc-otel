@@ -55,9 +55,18 @@ export function TraceDrawer({
             <span className="drawer-title-label">Trace</span>
             <MonoId value={traceId} head={16} />
           </div>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          <div className="drawer-header-actions">
+            <a
+              className="btn btn-sm"
+              href={`/api/projects/${encodeURIComponent(slug)}/traces/${encodeURIComponent(traceId)}/export`}
+              download
+            >
+              Export JSON
+            </a>
+            <button className="icon-btn" onClick={onClose} aria-label="Close">
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="drawer-tabs">

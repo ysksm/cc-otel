@@ -49,6 +49,16 @@ function filterOpts(f: Filters): {
   }
 }
 
+/** Build a download URL for exporting the (filtered) traces as CSV or JSON. */
+function exportUrl(slug: string, f: Filters, format: 'csv' | 'json'): string {
+  const params = new URLSearchParams({ format })
+  if (f.q.trim()) params.set('q', f.q.trim())
+  if (f.provider.trim()) params.set('provider', f.provider.trim())
+  if (f.model.trim()) params.set('model', f.model.trim())
+  if (f.errors) params.set('errors', 'true')
+  return `/api/projects/${encodeURIComponent(slug)}/traces/export?${params.toString()}`
+}
+
 export function TracesPage() {
   const { slug = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -195,6 +205,14 @@ export function TracesPage() {
             Clear
           </button>
         )}
+        <div className="export-actions">
+          <a className="btn btn-sm" href={exportUrl(slug, active, 'csv')} download>
+            Export CSV
+          </a>
+          <a className="btn btn-sm" href={exportUrl(slug, active, 'json')} download>
+            Export JSON
+          </a>
+        </div>
       </div>
 
       {loading && <Spinner label="Loading traces…" />}
