@@ -245,6 +245,21 @@ export interface Me {
   account?: Account
 }
 
+export interface SearchHit {
+  traceId: string
+  spanId: string
+  name: string
+  snippet: string
+  score: number // cosine 0..1
+}
+
+export interface SearchStatus {
+  configured: boolean
+  model: string
+  indexed: number
+  total: number
+}
+
 export interface TracesResponse {
   items: TraceSummary[]
   nextCursor: string
@@ -430,6 +445,21 @@ export const api = {
   },
   listSignals(slug: string): Promise<{ items: Signal[] }> {
     return request(`/api/projects/${encodeURIComponent(slug)}/signals`)
+  },
+  searchStatus(slug: string): Promise<SearchStatus> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/search/status`)
+  },
+  searchIndex(slug: string): Promise<{ indexed: number; done: boolean }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/search/index`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  },
+  searchSemantic(slug: string, query: string, limit?: number): Promise<{ hits: SearchHit[] }> {
+    return request(`/api/projects/${encodeURIComponent(slug)}/search/semantic`, {
+      method: 'POST',
+      body: JSON.stringify(limit != null ? { query, limit } : { query }),
+    })
   },
   getMe(): Promise<Me> {
     return request('/api/auth/me')

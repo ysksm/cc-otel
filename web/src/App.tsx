@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { TracesPage } from './pages/TracesPage'
 import { SessionsPage } from './pages/SessionsPage'
+import { SearchPage } from './pages/SearchPage'
 import { UsersPage } from './pages/UsersPage'
 import { ToolsPage } from './pages/ToolsPage'
 import { ToolDetailPage } from './pages/ToolDetailPage'
@@ -50,6 +51,7 @@ function AppRoutes() {
           <Route path="/projects/:slug/dashboard" element={<DashboardPage />} />
           <Route path="/projects/:slug/traces" element={<TracesPage />} />
           <Route path="/projects/:slug/sessions" element={<SessionsPage />} />
+          <Route path="/projects/:slug/search" element={<SearchPage />} />
           <Route path="/projects/:slug/users" element={<UsersPage />} />
           <Route path="/projects/:slug/tools" element={<ToolsPage />} />
           <Route path="/projects/:slug/tools/:toolName" element={<ToolDetailPage />} />
