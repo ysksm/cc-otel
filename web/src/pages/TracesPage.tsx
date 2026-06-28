@@ -8,6 +8,7 @@ import {
   ErrorBox,
   ModelBadges,
   RelativeTime,
+  ScoreBadge,
   Spinner,
 } from '../components/common'
 import { TraceDrawer, type DrawerTab } from '../components/TraceDrawer'
@@ -20,6 +21,34 @@ function parseTab(value: string | null): DrawerTab {
     : 'spans'
 }
 
+interface Filters {
+  q: string
+  provider: string
+  model: string
+  errors: boolean
+}
+
+const EMPTY_FILTERS: Filters = { q: '', provider: '', model: '', errors: false }
+
+function filtersActive(f: Filters): boolean {
+  return f.q !== '' || f.provider !== '' || f.model !== '' || f.errors
+}
+
+/** Build the listTraces opts for the active filters (omitting empty values). */
+function filterOpts(f: Filters): {
+  q?: string
+  provider?: string
+  model?: string
+  errors?: boolean
+} {
+  return {
+    q: f.q.trim() || undefined,
+    provider: f.provider.trim() || undefined,
+    model: f.model.trim() || undefined,
+    errors: f.errors || undefined,
+  }
+}
+
 export function TracesPage() {
   const { slug = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -30,11 +59,24 @@ export function TracesPage() {
   const [error, setError] = useState<Error | undefined>()
   const [done, setDone] = useState(false)
 
+  // Filter bar inputs (controlled). `q` is debounced into `appliedQ` before querying.
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  const [appliedQ, setAppliedQ] = useState('')
+
   const traceId = searchParams.get('traceId') ?? undefined
   const tab = parseTab(searchParams.get('tab'))
   const spanId = searchParams.get('spanId') ?? undefined
 
-  // Initial / project-change load.
+  // Debounce the search text (~300ms) so we don't query on every keystroke.
+  useEffect(() => {
+    const handle = setTimeout(() => setAppliedQ(filters.q), 300)
+    return () => clearTimeout(handle)
+  }, [filters.q])
+
+  // The effective filters used for querying (search uses the debounced value).
+  const active: Filters = { ...filters, q: appliedQ }
+
+  // Initial load + reload whenever the project or any active filter changes.
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -42,7 +84,7 @@ export function TracesPage() {
     setTraces([])
     setDone(false)
     api
-      .listTraces(slug, { limit: 50 })
+      .listTraces(slug, { limit: 50, ...filterOpts(active) })
       .then((res) => {
         if (cancelled) return
         setTraces(res.items)
@@ -57,14 +99,15 @@ export function TracesPage() {
     return () => {
       cancelled = true
     }
-  }, [slug])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, appliedQ, filters.provider, filters.model, filters.errors])
 
   const loadMore = useCallback(() => {
     if (loadingMore || done || traces.length === 0) return
     const last = traces[traces.length - 1]
     setLoadingMore(true)
     api
-      .listTraces(slug, { limit: 50, before: last.startTimeNs })
+      .listTraces(slug, { limit: 50, before: last.startTimeNs, ...filterOpts(active) })
       .then((res) => {
         setTraces((prev) => [...prev, ...res.items])
         if (res.items.length === 0 || !res.nextCursor) setDone(true)
@@ -74,7 +117,12 @@ export function TracesPage() {
         setError(err instanceof Error ? err : new Error(String(err)))
         setLoadingMore(false)
       })
-  }, [slug, traces, loadingMore, done])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, traces, loadingMore, done, appliedQ, filters.provider, filters.model, filters.errors])
+
+  const clearFilters = () => setFilters(EMPTY_FILTERS)
+
+  const anyFilterActive = filtersActive(filters)
 
   const openTrace = (id: string) => {
     const next = new URLSearchParams(searchParams)
@@ -112,10 +160,56 @@ export function TracesPage() {
         <span className="dim">{slug}</span>
       </div>
 
+      <div className="filter-bar">
+        <input
+          type="text"
+          className="filter-search"
+          placeholder="Search name or trace id"
+          value={filters.q}
+          onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+        />
+        <input
+          type="text"
+          className="filter-input"
+          placeholder="Provider, e.g. openai"
+          value={filters.provider}
+          onChange={(e) => setFilters((f) => ({ ...f, provider: e.target.value }))}
+        />
+        <input
+          type="text"
+          className="filter-input"
+          placeholder="Model, e.g. gpt-4o"
+          value={filters.model}
+          onChange={(e) => setFilters((f) => ({ ...f, model: e.target.value }))}
+        />
+        <label className="filter-check">
+          <input
+            type="checkbox"
+            checked={filters.errors}
+            onChange={(e) => setFilters((f) => ({ ...f, errors: e.target.checked }))}
+          />
+          Errors only
+        </label>
+        {anyFilterActive && (
+          <button type="button" className="filter-clear" onClick={clearFilters}>
+            Clear
+          </button>
+        )}
+      </div>
+
       {loading && <Spinner label="Loading traces…" />}
       {error && <ErrorBox error={error} />}
 
-      {!loading && !error && traces.length === 0 && (
+      {!loading && !error && traces.length === 0 && anyFilterActive && (
+        <EmptyState title="No matching traces">
+          <p>No traces match the current filters.</p>
+          <p>
+            Try broadening your search or <span className="link" onClick={clearFilters}>clear the filters</span>.
+          </p>
+        </EmptyState>
+      )}
+
+      {!loading && !error && traces.length === 0 && !anyFilterActive && (
         <EmptyState title="No traces yet">
           <p>
             Send OpenTelemetry traces to <code>POST /v1/traces</code> with an API key, and they will
@@ -136,6 +230,7 @@ export function TracesPage() {
                   <th>Time</th>
                   <th>Root span</th>
                   <th>Model</th>
+                  <th>Score</th>
                   <th className="num">Spans</th>
                   <th className="num">Errors</th>
                   <th className="num">Tokens</th>
@@ -147,11 +242,11 @@ export function TracesPage() {
                 {traces.map((t) => {
                   const providers = parseJsonArray(t.providers)
                   const models = parseJsonArray(t.models)
-                  const active = t.traceId === traceId
+                  const isActive = t.traceId === traceId
                   return (
                     <tr
                       key={t.traceId}
-                      className={`clickable${active ? ' active' : ''}`}
+                      className={`clickable${isActive ? ' active' : ''}`}
                       onClick={() => openTrace(t.traceId)}
                     >
                       <td>
@@ -162,6 +257,14 @@ export function TracesPage() {
                       </td>
                       <td>
                         <ModelBadges providers={providers} models={models} />
+                      </td>
+                      <td>
+                        <ScoreBadge
+                          scoreCount={t.scoreCount}
+                          passedCount={t.passedCount}
+                          failedCount={t.failedCount}
+                          avgScore={t.avgScore}
+                        />
                       </td>
                       <td className="num">{formatInt(t.spanCount)}</td>
                       <td className="num">

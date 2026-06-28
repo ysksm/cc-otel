@@ -30,6 +30,10 @@ export interface TraceSummary {
   providers: string // JSON array string
   rootSpanName: string
   rootSpanId: string
+  scoreCount: number
+  passedCount: number
+  failedCount: number
+  avgScore?: number // omitted/undefined when no scores
 }
 
 export interface Span {
@@ -211,10 +215,26 @@ export const api = {
   getProject(slug: string): Promise<Project> {
     return request(`/api/projects/${encodeURIComponent(slug)}`)
   },
-  listTraces(slug: string, opts?: { limit?: number; before?: number }): Promise<TracesResponse> {
+  listTraces(
+    slug: string,
+    opts?: {
+      limit?: number
+      before?: number
+      q?: string
+      provider?: string
+      model?: string
+      errors?: boolean
+      minDuration?: number
+    },
+  ): Promise<TracesResponse> {
     const params = new URLSearchParams()
     params.set('limit', String(opts?.limit ?? 50))
     if (opts?.before != null) params.set('before', String(opts.before))
+    if (opts?.q) params.set('q', opts.q)
+    if (opts?.provider) params.set('provider', opts.provider)
+    if (opts?.model) params.set('model', opts.model)
+    if (opts?.errors) params.set('errors', 'true')
+    if (opts?.minDuration != null) params.set('minDuration', String(opts.minDuration))
     return request(`/api/projects/${encodeURIComponent(slug)}/traces?${params.toString()}`)
   },
   getTrace(slug: string, traceId: string): Promise<TraceDetailResponse> {

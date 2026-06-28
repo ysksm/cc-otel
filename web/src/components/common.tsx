@@ -95,6 +95,35 @@ export function ErrorDot({ count }: { count: number }) {
   )
 }
 
+/**
+ * Compact score summary for a trace row: average as a percentage plus
+ * pass/fail counts. Renders a dim em-dash when there are no scores.
+ */
+export function ScoreBadge({
+  scoreCount,
+  passedCount,
+  failedCount,
+  avgScore,
+}: {
+  scoreCount: number
+  passedCount: number
+  failedCount: number
+  avgScore?: number
+}) {
+  if (scoreCount <= 0) return <span className="dim">—</span>
+  const pct = avgScore != null ? `${Math.round(avgScore * 100)}%` : null
+  return (
+    <span
+      className="score-badge"
+      title={`${scoreCount} score${scoreCount === 1 ? '' : 's'} • ${passedCount} passed • ${failedCount} failed`}
+    >
+      {pct && <span className="score-badge-avg">{pct}</span>}
+      {passedCount > 0 && <span className="score-badge-pass">✓{passedCount}</span>}
+      {failedCount > 0 && <span className="score-badge-fail">✗{failedCount}</span>}
+    </span>
+  )
+}
+
 export function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="stat">

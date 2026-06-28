@@ -322,6 +322,77 @@ select:disabled {
   color: var(--dim);
 }
 
+/* ---------- Score badge ---------- */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.score-badge-avg {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.score-badge-pass {
+  color: var(--green);
+  font-weight: 600;
+}
+.score-badge-fail {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* ---------- Filter bar ---------- */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.filter-bar input[type="text"] {
+  width: auto;
+}
+.filter-search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 360px;
+}
+.filter-input {
+  flex: 0 1 200px;
+  min-width: 150px;
+}
+.filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-check input {
+  width: auto;
+  accent-color: var(--accent-2);
+  cursor: pointer;
+}
+.filter-clear {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 12.5px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  font-family: inherit;
+}
+.filter-clear:hover {
+  color: var(--text);
+  background: var(--bg-3);
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   background: var(--bg-3);
